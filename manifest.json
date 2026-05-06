@@ -1,11 +1,11 @@
 {
   "name": "Asistente de Agenda",
-  "short_name": "Agenda",
+  "short_name": "Asistente Agenda",
   "description": "Agendá eventos en Google Calendar por voz o texto",
   "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#4a7fd4",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
   "orientation": "portrait",
   "icons": [
     {
