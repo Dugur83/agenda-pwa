@@ -358,7 +358,12 @@ Pagos→"PAGO - [nombre]" | Llamadas→"LLAMADA - [nombre]" | Banco→"BANCO - [
 Calls→"CALL - [nombre]" | Cenas→"CENA - [nombre]" | Retiros→"RETIRO - [nombre]"
 Otros→solo el nombre sin prefijo
 
-COLORES (colorId): laboral→"3" (violeta) | personal→"11" (rojo) | sin especificar→omitir
+COLORES (colorId):
+- SIEMPRE laboral (colorId "3" violeta): REUNIÓN, OBRAS, CALL
+- SIEMPRE personal (colorId "11" rojo): TURNO, CENA
+- PREGUNTAR si es laboral o personal: PAGO, LLAMADA, BANCO, RETIRO
+- Sin etiqueta: si dice laboral→"3", si dice personal→"11", si no especifica→omitir colorId
+Cuando debas preguntar usá need_more: {"need_more":"Es laboral o personal?"}
 
 RECORDATORIOS: array de {method:"popup", minutes: N} solo si el usuario los pide.
 
