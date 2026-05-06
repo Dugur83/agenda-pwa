@@ -10,135 +10,110 @@
 <link rel="manifest" href="manifest.json">
 <title>Asistente de Agenda</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#f5f5f5; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
 
-  /* ── PANTALLA DE SETUP ── */
-  #setup-screen {
-    display: none; position: fixed; inset: 0; background: #fff; z-index: 100;
-    flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px;
-  }
-  #setup-screen.show { display: flex; }
-  #setup-icon { width: 72px; height: 72px; border-radius: 18px; background: #e8f0fe; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
-  #setup-title { font-size: 22px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; text-align: center; }
-  #setup-desc { font-size: 14px; color: #666; text-align: center; line-height: 1.6; margin-bottom: 32px; }
-  #setup-desc a { color: #4a7fd4; text-decoration: none; font-weight: 500; }
-  #setup-label { font-size: 13px; font-weight: 600; color: #444; align-self: flex-start; margin-bottom: 6px; width: 100%; max-width: 400px; }
-  #api-key-input {
-    width: 100%; max-width: 400px; padding: 13px 16px; border: 1.5px solid #ddd; border-radius: 12px;
-    font-size: 14px; font-family: 'Courier New', monospace; color: #1a1a1a; background: #f8f8f8;
-    outline: none; margin-bottom: 8px; letter-spacing: 0.5px;
-  }
-  #api-key-input:focus { border-color: #4a7fd4; background: #fff; }
-  #setup-hint { font-size: 12px; color: #999; width: 100%; max-width: 400px; margin-bottom: 24px; line-height: 1.5; }
-  #setup-save {
-    width: 100%; max-width: 400px; padding: 14px; background: #4a7fd4; color: #fff;
-    border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer;
-  }
-  #setup-save:disabled { opacity: 0.4; }
-  #setup-error { font-size: 13px; color: #e24b4a; margin-top: 12px; text-align: center; }
+  /* SETUP */
+  #setup { display:none; position:fixed; inset:0; background:#fff; z-index:100; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px; }
+  #setup.show { display:flex; }
+  .s-icon { width:72px; height:72px; border-radius:18px; background:#e8f0fe; display:flex; align-items:center; justify-content:center; margin-bottom:20px; }
+  .s-title { font-size:22px; font-weight:700; color:#1a1a1a; margin-bottom:8px; text-align:center; }
+  .s-desc { font-size:14px; color:#666; text-align:center; line-height:1.65; margin-bottom:28px; }
+  .s-desc a { color:#4a7fd4; text-decoration:none; font-weight:500; }
+  .s-label { font-size:13px; font-weight:600; color:#444; align-self:flex-start; margin-bottom:6px; width:100%; max-width:400px; }
+  #key-input { width:100%; max-width:400px; padding:13px 16px; border:1.5px solid #ddd; border-radius:12px; font-size:14px; font-family:'Courier New',monospace; color:#1a1a1a; background:#f8f8f8; outline:none; margin-bottom:6px; }
+  #key-input:focus { border-color:#4a7fd4; background:#fff; }
+  .s-hint { font-size:12px; color:#aaa; width:100%; max-width:400px; margin-bottom:24px; }
+  #save-btn { width:100%; max-width:400px; padding:14px; background:#4a7fd4; color:#fff; border:none; border-radius:12px; font-size:15px; font-weight:600; cursor:pointer; }
+  #save-btn:disabled { opacity:0.4; }
+  #s-err { font-size:13px; color:#e24b4a; margin-top:10px; text-align:center; min-height:18px; }
 
-  /* ── APP PRINCIPAL ── */
-  #app { display: flex; flex-direction: column; height: 100dvh; max-width: 600px; margin: 0 auto; width: 100%; background: #fff; }
+  /* APP */
+  #app { display:flex; flex-direction:column; height:100dvh; max-width:600px; margin:0 auto; width:100%; background:#fff; }
+  #hdr { display:flex; align-items:center; gap:10px; padding:14px 16px; padding-top:max(14px,env(safe-area-inset-top)); border-bottom:1px solid #eee; background:#fff; flex-shrink:0; }
+  #hdr-ico { width:36px; height:36px; border-radius:9px; background:#e8f0fe; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  #hdr-t { font-size:15px; font-weight:600; color:#1a1a1a; }
+  #hdr-s { font-size:11px; color:#888; margin-top:1px; }
+  #dot { width:8px; height:8px; border-radius:50%; background:#3d9970; margin-left:auto; flex-shrink:0; }
+  #cfg-btn { width:32px; height:32px; border-radius:50%; background:none; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#888; margin-left:4px; flex-shrink:0; }
 
-  #hdr { display: flex; align-items: center; gap: 10px; padding: 14px 16px; padding-top: max(14px, env(safe-area-inset-top)); border-bottom: 1px solid #eee; background: #fff; flex-shrink: 0; }
-  #hdr-icon { width: 36px; height: 36px; border-radius: 9px; background: #e8f0fe; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  #hdr-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
-  #hdr-sub { font-size: 11px; color: #888; margin-top: 1px; }
-  #online-dot { width: 8px; height: 8px; border-radius: 50%; background: #3d9970; margin-left: auto; flex-shrink: 0; }
-  #settings-btn { width: 32px; height: 32px; border-radius: 50%; background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #888; margin-left: 4px; }
-
-  #msgs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
-  .row { display: flex; align-items: flex-end; gap: 8px; }
-  .row.user { justify-content: flex-end; }
-  .av { width: 28px; height: 28px; border-radius: 50%; background: #e8f0fe; color: #4a7fd4; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
-  .bbl { max-width: 82%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
-  .bbl.a { background: #f0f0f0; color: #1a1a1a; border-bottom-left-radius: 4px; }
-  .bbl.u { background: #4a7fd4; color: #fff; border-bottom-right-radius: 4px; }
-  .dots { display: inline-flex; gap: 4px; align-items: center; height: 14px; }
-  .dots span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #aaa; animation: td 1.2s infinite ease-in-out; }
+  #msgs { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; -webkit-overflow-scrolling:touch; }
+  .row { display:flex; align-items:flex-end; gap:8px; }
+  .row.u { justify-content:flex-end; }
+  .av { width:28px; height:28px; border-radius:50%; background:#e8f0fe; color:#4a7fd4; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; flex-shrink:0; }
+  .bbl { max-width:82%; padding:10px 14px; border-radius:18px; font-size:14px; line-height:1.55; white-space:pre-wrap; word-break:break-word; }
+  .bbl.a { background:#f0f0f0; color:#1a1a1a; border-bottom-left-radius:4px; }
+  .bbl.u { background:#4a7fd4; color:#fff; border-bottom-right-radius:4px; }
+  .bbl.action { background:#e8f5e9; color:#1a1a1a; border:1px solid #c8e6c9; border-bottom-left-radius:4px; }
+  .gcal-btn { display:inline-block; margin-top:10px; padding:10px 18px; background:#4a7fd4; color:#fff; border-radius:10px; font-size:13px; font-weight:600; text-decoration:none; }
+  .dots { display:inline-flex; gap:4px; align-items:center; height:14px; }
+  .dots span { display:inline-block; width:6px; height:6px; border-radius:50%; background:#aaa; animation:td 1.2s infinite ease-in-out; }
   .dots span:nth-child(2){animation-delay:.2s} .dots span:nth-child(3){animation-delay:.4s}
   @keyframes td{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-5px);opacity:1}}
 
-  #foot { padding: 10px 12px; padding-bottom: max(16px, env(safe-area-inset-bottom)); border-top: 1px solid #eee; background: #fff; flex-shrink: 0; }
-  #chips { display: flex; gap: 6px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
-  #chips::-webkit-scrollbar { display: none; }
-  .chip { font-size: 12px; padding: 6px 13px; border-radius: 20px; border: 1px solid #ddd; background: #f8f8f8; color: #444; cursor: pointer; white-space: nowrap; flex-shrink: 0; user-select: none; }
-  .chip:active { background: #e0e0e0; }
-
-  #rec-bar { display: none; align-items: center; gap: 8px; margin-bottom: 8px; padding: 8px 12px; background: #fff5f5; border-radius: 10px; border: 1px solid #fcc; }
-  #rec-bar.show { display: flex; }
-  #rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #e24b4a; flex-shrink: 0; animation: blink 1s infinite; }
+  #foot { padding:10px 12px; padding-bottom:max(16px,env(safe-area-inset-bottom)); border-top:1px solid #eee; background:#fff; flex-shrink:0; }
+  #chips { display:flex; gap:6px; margin-bottom:10px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+  #chips::-webkit-scrollbar { display:none; }
+  .chip { font-size:12px; padding:6px 13px; border-radius:20px; border:1px solid #ddd; background:#f8f8f8; color:#444; cursor:pointer; white-space:nowrap; flex-shrink:0; user-select:none; }
+  .chip:active { background:#e0e0e0; }
+  #rec-bar { display:none; align-items:center; gap:8px; margin-bottom:8px; padding:8px 12px; background:#fff5f5; border-radius:10px; border:1px solid #fcc; }
+  #rec-bar.show { display:flex; }
+  #rec-dot { width:8px; height:8px; border-radius:50%; background:#e24b4a; flex-shrink:0; animation:blink 1s infinite; }
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-  #rec-text { font-size: 13px; color: #e24b4a; font-weight: 500; flex: 1; }
-  #stop-btn { font-size: 12px; color: #e24b4a; background: none; border: 1px solid #fbb; border-radius: 6px; padding: 4px 9px; cursor: pointer; }
-
-  #err-bar { display: none; font-size: 12px; color: #e24b4a; margin-bottom: 8px; padding: 6px 10px; background: #fff5f5; border-radius: 8px; }
-  #err-bar.show { display: block; }
-
-  #input-row { display: flex; gap: 8px; align-items: flex-end; }
-  #txt { flex: 1; resize: none; border: 1.5px solid #ddd; border-radius: 20px; font-size: 15px; line-height: 1.4; padding: 10px 15px; font-family: inherit; background: #f8f8f8; color: #1a1a1a; outline: none; max-height: 100px; }
-  #txt:focus { border-color: #4a7fd4; background: #fff; }
-
-  .btn-round { width: 42px; height: 42px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: transform .1s, opacity .15s; }
-  .btn-round:active { transform: scale(0.92); }
-  #mic-btn { background: #f0f0f0; color: #555; position: relative; }
-  #mic-btn.recording { background: #e24b4a; color: #fff; }
-  #mic-btn.recording::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid #e24b4a; animation: ripple 1.2s infinite; }
-  @keyframes ripple{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.6);opacity:0}}
-  #send-btn { background: #4a7fd4; color: #fff; }
-  #send-btn:disabled { opacity: 0.35; }
-
-  #install-bar { display: none; align-items: center; gap: 10px; padding: 10px 16px; background: #e8f0fe; border-bottom: 1px solid #c5d8f8; flex-shrink: 0; }
-  #install-bar.show { display: flex; }
-  #install-bar span { font-size: 13px; color: #2c5aa0; flex: 1; }
-  #install-btn2 { font-size: 12px; font-weight: 600; color: #fff; background: #4a7fd4; border: none; border-radius: 8px; padding: 6px 14px; cursor: pointer; white-space: nowrap; }
-  #dismiss-btn { font-size: 18px; color: #888; background: none; border: none; cursor: pointer; padding: 0 4px; }
+  #rec-txt { font-size:13px; color:#e24b4a; font-weight:500; flex:1; }
+  #stop-btn { font-size:12px; color:#e24b4a; background:none; border:1px solid #fbb; border-radius:6px; padding:4px 9px; cursor:pointer; }
+  #err-bar { display:none; font-size:12px; color:#e24b4a; margin-bottom:8px; padding:6px 10px; background:#fff5f5; border-radius:8px; }
+  #err-bar.show { display:block; }
+  #irow { display:flex; gap:8px; align-items:flex-end; }
+  #txt { flex:1; resize:none; border:1.5px solid #ddd; border-radius:20px; font-size:15px; line-height:1.4; padding:10px 15px; font-family:inherit; background:#f8f8f8; color:#1a1a1a; outline:none; max-height:100px; }
+  #txt:focus { border-color:#4a7fd4; background:#fff; }
+  .br { width:42px; height:42px; border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; transition:transform .1s,opacity .15s; }
+  .br:active { transform:scale(0.92); }
+  #mic { background:#f0f0f0; color:#555; position:relative; }
+  #mic.on { background:#e24b4a; color:#fff; }
+  #mic.on::after { content:''; position:absolute; inset:-4px; border-radius:50%; border:2px solid #e24b4a; animation:rpl 1.2s infinite; }
+  @keyframes rpl{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.6);opacity:0}}
+  #snd { background:#4a7fd4; color:#fff; }
+  #snd:disabled { opacity:0.35; }
 </style>
 </head>
 <body>
 
-<!-- PANTALLA DE CONFIGURACIÓN -->
-<div id="setup-screen">
-  <div id="setup-icon">
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#4a7fd4" stroke-width="2">
+<!-- SETUP -->
+<div id="setup">
+  <div class="s-icon">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#4a7fd4" stroke-width="2">
       <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
     </svg>
   </div>
-  <div id="setup-title">Configuración inicial</div>
-  <div id="setup-desc">
-    Para funcionar, la app necesita tu API key de Anthropic.<br><br>
-    Conseguila gratis en <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys → Create Key.<br><br>
-    Se guarda solo en tu celu y nadie más la ve.
+  <div class="s-title">Configuración</div>
+  <div class="s-desc">
+    Necesitás una API key de Anthropic para usar la app.<br><br>
+    Conseguila en <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys → Create Key.<br><br>
+    Se guarda solo en tu dispositivo.
   </div>
-  <div id="setup-label">Tu API Key</div>
-  <input id="api-key-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false" oninput="onKeyInput()">
-  <div id="setup-hint">Empieza con "sk-ant-". Se guarda localmente en tu dispositivo.</div>
-  <button id="setup-save" onclick="saveKey()" disabled>Guardar y continuar</button>
-  <div id="setup-error"></div>
+  <div class="s-label">API Key de Anthropic</div>
+  <input id="key-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false" oninput="onKI()">
+  <div class="s-hint">Debe empezar con "sk-ant-"</div>
+  <button id="save-btn" onclick="saveKey()" disabled>Guardar y continuar</button>
+  <div id="s-err"></div>
 </div>
 
-<!-- APP PRINCIPAL -->
+<!-- APP -->
 <div id="app">
-  <div id="install-bar">
-    <span>Instalá la app en tu pantalla de inicio</span>
-    <button id="install-btn2">Instalar</button>
-    <button id="dismiss-btn">✕</button>
-  </div>
-
   <div id="hdr">
-    <div id="hdr-icon">
+    <div id="hdr-ico">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4a7fd4" stroke-width="2">
         <rect x="3" y="4" width="18" height="18" rx="2"/>
         <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
       </svg>
     </div>
     <div style="flex:1">
-      <div id="hdr-title">Asistente de agenda</div>
-      <div id="hdr-sub">Google Calendar · Buenos Aires</div>
+      <div id="hdr-t">Asistente de agenda</div>
+      <div id="hdr-s">Google Calendar · Buenos Aires</div>
     </div>
-    <div id="online-dot"></div>
-    <button id="settings-btn" onclick="showSetup(true)" title="Configuración">
+    <div id="dot"></div>
+    <button id="cfg-btn" onclick="showSetup(true)" title="Configuración">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
       </svg>
@@ -149,37 +124,35 @@
 
   <div id="foot">
     <div id="chips">
-      <span class="chip" onclick="setInput('Reunión con ')">REUNIÓN</span>
-      <span class="chip" onclick="setInput('Turno con ')">TURNO</span>
-      <span class="chip" onclick="setInput('Obras: ')">OBRAS</span>
-      <span class="chip" onclick="setInput('Pago: ')">PAGO</span>
-      <span class="chip" onclick="setInput('Llamada con ')">LLAMADA</span>
-      <span class="chip" onclick="setInput('Banco: ')">BANCO</span>
-      <span class="chip" onclick="setInput('Call con ')">CALL</span>
-      <span class="chip" onclick="setInput('Cena con ')">CENA</span>
-      <span class="chip" onclick="setInput('Retiro: ')">RETIRO</span>
-      <span class="chip" onclick="setInput('Evento personal: ')">PERSONAL</span>
-      <span class="chip" onclick="setInput('Evento laboral: ')">LABORAL</span>
+      <span class="chip" onclick="si('Reunión con ')">REUNIÓN</span>
+      <span class="chip" onclick="si('Turno con ')">TURNO</span>
+      <span class="chip" onclick="si('Obras: ')">OBRAS</span>
+      <span class="chip" onclick="si('Pago: ')">PAGO</span>
+      <span class="chip" onclick="si('Llamada con ')">LLAMADA</span>
+      <span class="chip" onclick="si('Banco: ')">BANCO</span>
+      <span class="chip" onclick="si('Call con ')">CALL</span>
+      <span class="chip" onclick="si('Cena con ')">CENA</span>
+      <span class="chip" onclick="si('Retiro: ')">RETIRO</span>
+      <span class="chip" onclick="si('Evento personal: ')">PERSONAL</span>
+      <span class="chip" onclick="si('Evento laboral: ')">LABORAL</span>
     </div>
-
     <div id="rec-bar">
       <div id="rec-dot"></div>
-      <span id="rec-text">Escuchando... hablá ahora</span>
+      <span id="rec-txt">Escuchando... hablá ahora</span>
       <button id="stop-btn" onclick="stopRec()">Detener</button>
     </div>
     <div id="err-bar"></div>
-
-    <div id="input-row">
-      <textarea id="txt" rows="1" placeholder="Escribí o usá el micrófono..." oninput="onInput(this)"></textarea>
-      <button class="btn-round" id="mic-btn" onclick="toggleMic()">
-        <svg id="mic-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <div id="irow">
+      <textarea id="txt" rows="1" placeholder="Escribí o usá el micrófono..." oninput="onTI(this)"></textarea>
+      <button class="br" id="mic" onclick="toggleMic()">
+        <svg id="mic-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="9" y="2" width="6" height="11" rx="3"/>
           <path d="M5 10a7 7 0 0 0 14 0"/>
           <line x1="12" y1="19" x2="12" y2="22"/>
           <line x1="9" y1="22" x2="15" y2="22"/>
         </svg>
       </button>
-      <button class="btn-round" id="send-btn" onclick="send()" disabled>
+      <button class="br" id="snd" onclick="send()" disabled>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
         </svg>
@@ -189,69 +162,102 @@
 </div>
 
 <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+// ── API KEY ──
+function getKey(){ return localStorage.getItem('aak')||''; }
+function showSetup(fromCfg=false){
+  document.getElementById('setup').classList.add('show');
+  if(fromCfg && getKey()) document.getElementById('key-input').value=getKey();
+  document.getElementById('s-err').textContent='';
+  if(fromCfg) document.getElementById('save-btn').disabled=false;
+}
+function onKI(){
+  const v=document.getElementById('key-input').value.trim();
+  document.getElementById('save-btn').disabled=!v.startsWith('sk-ant-');
+  document.getElementById('s-err').textContent='';
+}
+function saveKey(){
+  const v=document.getElementById('key-input').value.trim();
+  if(!v.startsWith('sk-ant-')){ document.getElementById('s-err').textContent='La key debe empezar con sk-ant-'; return; }
+  localStorage.setItem('aak',v);
+  document.getElementById('setup').classList.remove('show');
+  if(!document.getElementById('msgs').children.length)
+    addMsg('a','Hola! Decime qué querés agendar. Podés escribir, tocar un chip o usar el micrófono.');
+}
+if(!getKey()) showSetup();
+
+// ── HELPERS ──
+const today = new Date().toLocaleDateString("es-AR",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+const msgsEl=document.getElementById('msgs');
+const txtEl=document.getElementById('txt');
+const sndBtn=document.getElementById('snd');
+const micBtn=document.getElementById('mic');
+const micIco=document.getElementById('mic-ico');
+const recBar=document.getElementById('rec-bar');
+const errBar=document.getElementById('err-bar');
+let history=[], busy=false, recognition=null, isRec=false;
+
+function si(v){ txtEl.value=v; txtEl.focus(); onTI(txtEl); }
+function onTI(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; sndBtn.disabled=busy||!el.value.trim(); }
+function showErr(m){ errBar.textContent=m; errBar.classList.add('show'); setTimeout(()=>errBar.classList.remove('show'),5000); }
+
+function addMsg(role,text){
+  const row=document.createElement('div'); row.className='row'+(role==='u'?' u':'');
+  if(role!=='u'){ const av=document.createElement('div'); av.className='av'; av.textContent='A'; row.appendChild(av); }
+  const b=document.createElement('div'); b.className='bbl '+role; b.textContent=text;
+  row.appendChild(b); msgsEl.appendChild(row); msgsEl.scrollTop=msgsEl.scrollHeight; return b;
 }
 
-// ── PWA install ──
-let deferredPrompt = null;
-const installBar = document.getElementById('install-bar');
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault(); deferredPrompt = e; installBar.classList.add('show');
-});
-document.getElementById('install-btn2').addEventListener('click', async () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt(); await deferredPrompt.userChoice;
-  deferredPrompt = null; installBar.classList.remove('show');
-});
-document.getElementById('dismiss-btn').addEventListener('click', () => installBar.classList.remove('show'));
-window.addEventListener('appinstalled', () => installBar.classList.remove('show'));
-
-// ── API Key ──
-const API_KEY_STORAGE = 'anthropic_api_key';
-
-function getKey() { return localStorage.getItem(API_KEY_STORAGE) || ''; }
-
-function showSetup(fromSettings = false) {
-  const screen = document.getElementById('setup-screen');
-  const input = document.getElementById('api-key-input');
-  screen.classList.add('show');
-  if (fromSettings && getKey()) {
-    input.value = getKey();
-    document.getElementById('setup-save').disabled = false;
-  }
-  document.getElementById('setup-error').textContent = '';
+function addActionMsg(summary, gcalUrl){
+  const row=document.createElement('div'); row.className='row';
+  const av=document.createElement('div'); av.className='av'; av.textContent='A'; row.appendChild(av);
+  const b=document.createElement('div'); b.className='bbl action';
+  b.innerHTML=summary+'<br><a class="gcal-btn" href="'+gcalUrl+'" target="_blank">Abrir en Google Calendar →</a>';
+  row.appendChild(b); msgsEl.appendChild(row); msgsEl.scrollTop=msgsEl.scrollHeight;
 }
 
-function onKeyInput() {
-  const val = document.getElementById('api-key-input').value.trim();
-  document.getElementById('setup-save').disabled = !val.startsWith('sk-ant-');
-  document.getElementById('setup-error').textContent = '';
+function addTyping(){
+  const row=document.createElement('div'); row.className='row'; row.id='trow';
+  const av=document.createElement('div'); av.className='av'; av.textContent='A'; row.appendChild(av);
+  const b=document.createElement('div'); b.className='bbl a';
+  b.innerHTML='<span class="dots"><span></span><span></span><span></span></span>';
+  row.appendChild(b); msgsEl.appendChild(row); msgsEl.scrollTop=msgsEl.scrollHeight;
+}
+function rmTyping(){ const e=document.getElementById('trow'); if(e)e.remove(); }
+
+// ── GOOGLE CALENDAR URL ──
+function toGCalDate(isoStr){
+  // Convertir "2026-05-10T15:00:00" a "20260510T150000"
+  return isoStr.replace(/[-:]/g,'').replace(/\.\d+/,'').slice(0,15);
 }
 
-function saveKey() {
-  const val = document.getElementById('api-key-input').value.trim();
-  if (!val.startsWith('sk-ant-')) {
-    document.getElementById('setup-error').textContent = 'La key debe empezar con sk-ant-';
-    return;
-  }
-  localStorage.setItem(API_KEY_STORAGE, val);
-  document.getElementById('setup-screen').classList.remove('show');
-  if (document.getElementById('msgs').children.length === 0) {
-    addMsg("assistant", "Listo! Agendame lo que necesites. Podés escribir, tocar un chip o usar el micrófono.");
-  }
+function buildGCalUrl(ev){
+  const base='https://calendar.google.com/calendar/render?action=TEMPLATE';
+  const start=toGCalDate(ev.start);
+  const end=toGCalDate(ev.end);
+  let url=base+'&text='+encodeURIComponent(ev.title)+'&dates='+start+'/'+end;
+  if(ev.location) url+='&location='+encodeURIComponent(ev.location);
+  if(ev.description) url+='&details='+encodeURIComponent(ev.description);
+  return url;
 }
 
-// Mostrar setup si no hay key guardada
-if (!getKey()) showSetup();
+function formatSummary(ev){
+  const d=new Date(ev.start);
+  const fecha=d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+  const hora=d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  let txt='Evento listo!\n\n📅 '+ev.title+'\n🗓 '+fecha+' a las '+hora;
+  if(ev.location) txt+='\n📍 '+ev.location;
+  txt+='\n\nTocá el botón para abrirlo en Google Calendar y guardarlo.';
+  return txt;
+}
 
-// ── App ──
-const today = new Date().toLocaleDateString("es-AR", {weekday:"long",year:"numeric",month:"long",day:"numeric"});
+// ── SEND ──
+const SYSTEM=`Sos un asistente de agenda. El usuario está en Buenos Aires, Argentina (UTC-3). Hoy es ${today}.
 
-const SYSTEM = `Sos un asistente de agenda personal para un usuario en Buenos Aires, Argentina (UTC-3).
-Tu única función es crear y gestionar eventos en Google Calendar usando las herramientas disponibles.
+Tu tarea: interpretar lo que el usuario quiere agendar y devolver ÚNICAMENTE un JSON válido. Sin texto extra, sin markdown, sin explicaciones. Solo el JSON puro.
 
-REGLAS DE TÍTULO (prefijo en MAYÚSCULAS, espacio, guion, espacio, nombre):
+REGLAS DE TÍTULO:
 - Reuniones  → "REUNIÓN - [nombre]"
 - Turnos     → "TURNO - [nombre]"
 - Obras      → "OBRAS - [nombre]"
@@ -261,149 +267,95 @@ REGLAS DE TÍTULO (prefijo en MAYÚSCULAS, espacio, guion, espacio, nombre):
 - Calls      → "CALL - [nombre]"
 - Cenas      → "CENA - [nombre]"
 - Retiros    → "RETIRO - [nombre]"
-- Resto      → solo el nombre, sin prefijo
+- Otros      → solo el nombre, sin prefijo
 
-COLORES:
-- Laboral  → colorId "3" (violeta)
-- Personal → colorId "11" (rojo)
-- Sin especificar → sin color
+Si falta la hora u otro dato crítico, devolvé: {"need_more": "pregunta breve en español rioplatense informal"}
 
-RECORDATORIOS: solo si el usuario los pide, con el tiempo indicado.
+Formato cuando tenés todo:
+{"title":"TÍTULO","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","location":"lugar opcional","description":"detalles opcionales"}
 
-Hoy es ${today}. Respondé en español rioplatense informal y breve. Confirmá lo creado. Si falta la hora, preguntá. Nunca uses ¿ ni ¡.`;
+Si la duración no se menciona, asumí 1 hora. Nunca uses ¿ ni ¡.`;
 
-const msgsEl = document.getElementById("msgs");
-const txtEl = document.getElementById("txt");
-const sendBtn = document.getElementById("send-btn");
-const micBtn = document.getElementById("mic-btn");
-const micIcon = document.getElementById("mic-icon");
-const recBar = document.getElementById("rec-bar");
-const errBar = document.getElementById("err-bar");
-let history = [];
-let busy = false;
-let recognition = null;
-let isRecording = false;
+async function send(){
+  const text=txtEl.value.trim();
+  if(!text||busy) return;
+  const key=getKey(); if(!key){ showSetup(); return; }
 
-function setInput(v) { txtEl.value = v; txtEl.focus(); onInput(txtEl); }
-
-function onInput(el) {
-  el.style.height = "auto";
-  el.style.height = Math.min(el.scrollHeight, 100) + "px";
-  sendBtn.disabled = busy || !el.value.trim();
-}
-
-function addMsg(role, text) {
-  const row = document.createElement("div");
-  row.className = "row " + (role==="user"?"user":"");
-  if(role !== "user") {
-    const av = document.createElement("div"); av.className="av"; av.textContent="A"; row.appendChild(av);
-  }
-  const b = document.createElement("div");
-  b.className = "bbl " + (role==="user"?"u":"a");
-  b.textContent = text;
-  row.appendChild(b);
-  msgsEl.appendChild(row);
-  msgsEl.scrollTop = msgsEl.scrollHeight;
-}
-
-function addTyping() {
-  const row = document.createElement("div"); row.className="row"; row.id="trow";
-  const av = document.createElement("div"); av.className="av"; av.textContent="A"; row.appendChild(av);
-  const b = document.createElement("div"); b.className="bbl a";
-  b.innerHTML='<span class="dots"><span></span><span></span><span></span></span>';
-  row.appendChild(b); msgsEl.appendChild(row); msgsEl.scrollTop = msgsEl.scrollHeight;
-}
-function rmTyping() { const e=document.getElementById("trow"); if(e)e.remove(); }
-function showErr(msg) { errBar.textContent=msg; errBar.classList.add("show"); setTimeout(()=>errBar.classList.remove("show"),5000); }
-
-async function send() {
-  const text = txtEl.value.trim();
-  if(!text || busy) return;
-  const key = getKey();
-  if(!key) { showSetup(); return; }
-
-  busy = true; sendBtn.disabled = true;
-  history.push({role:"user",content:text});
-  addMsg("user", text);
-  txtEl.value = ""; txtEl.style.height="auto";
+  busy=true; sndBtn.disabled=true;
+  history.push({role:'user',content:text});
+  addMsg('u',text);
+  txtEl.value=''; txtEl.style.height='auto';
   addTyping();
 
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST",
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
       headers:{
-        "Content-Type":"application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "mcp-client-2025-04-04",
-        "anthropic-dangerous-direct-browser-access": "true"
+        'Content-Type':'application/json',
+        'x-api-key':key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:"claude-sonnet-4-20250514",
-        max_tokens:1000,
+        model:'claude-sonnet-4-20250514',
+        max_tokens:500,
         system:SYSTEM,
-        messages:history,
-        mcp_servers:[{type:"url",url:"https://calendarmcp.googleapis.com/mcp/v1",name:"gcal"}]
+        messages:history
       })
     });
-    const data = await res.json();
-    if(data.error) {
-      rmTyping();
-      if(data.error.type === 'authentication_error') {
-        addMsg("assistant","La API key no es válida. Tocá el ícono de ajustes para cambiarla.");
-      } else {
-        addMsg("assistant","Error: " + data.error.message);
-      }
+    const data=await res.json();
+    rmTyping();
+
+    if(data.error){
+      const msg=data.error.type==='authentication_error'
+        ? 'API key inválida. Tocá ⚙️ para cambiarla.'
+        : 'Error: '+data.error.message;
+      addMsg('a',msg);
     } else {
-      const reply = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim() || "Listo! Revisá tu calendario.";
-      history.push({role:"assistant",content:reply});
-      rmTyping(); addMsg("assistant", reply);
+      const raw=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+      history.push({role:'assistant',content:raw});
+      try{
+        const clean=raw.replace(/```json|```/g,'').trim();
+        const parsed=JSON.parse(clean);
+        if(parsed.need_more){
+          addMsg('a',parsed.need_more);
+        } else {
+          const url=buildGCalUrl(parsed);
+          const summary=formatSummary(parsed);
+          addActionMsg(summary,url);
+        }
+      } catch(e){
+        // Si no es JSON válido, mostrarlo como texto
+        addMsg('a',raw);
+      }
     }
-  } catch(e) {
-    rmTyping(); addMsg("assistant","Hubo un error de conexión. Verificá tu internet.");
+  } catch(e){
+    rmTyping(); addMsg('a','Error de conexión. Verificá tu internet.');
   }
-  busy = false; sendBtn.disabled = !txtEl.value.trim();
-  txtEl.focus();
+  busy=false; sndBtn.disabled=!txtEl.value.trim(); txtEl.focus();
 }
 
-txtEl.addEventListener("keydown", e => { if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();} });
+txtEl.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} });
 
-function toggleMic() { isRecording ? stopRec() : startRec(); }
-
-function startRec() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR) { showErr("Tu navegador no soporta voz. Usá Chrome."); return; }
-  recognition = new SR();
-  recognition.lang = "es-AR";
-  recognition.continuous = false;
-  recognition.interimResults = true;
-  recognition.onstart = () => {
-    isRecording = true; micBtn.classList.add("recording"); recBar.classList.add("show"); errBar.classList.remove("show");
-    micIcon.innerHTML = '<rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor"/>';
-  };
-  recognition.onresult = e => {
-    let t = ""; for(let i=0;i<e.results.length;i++) t += e.results[i][0].transcript;
-    txtEl.value = t; onInput(txtEl);
-  };
-  recognition.onerror = e => {
-    stopRec();
-    if(e.error==="not-allowed") showErr("Permiso denegado. Ajustes → Chrome → Permisos → Micrófono.");
-    else if(e.error==="no-speech") showErr("No se detectó voz. Intentá de nuevo.");
-    else showErr("Error al grabar. Intentá de nuevo.");
-  };
-  recognition.onend = () => { stopRec(); };
+// ── MIC ──
+function toggleMic(){ isRec?stopRec():startRec(); }
+function startRec(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ showErr('Tu navegador no soporta voz. Usá Chrome.'); return; }
+  recognition=new SR(); recognition.lang='es-AR'; recognition.continuous=false; recognition.interimResults=true;
+  recognition.onstart=()=>{ isRec=true; micBtn.classList.add('on'); recBar.classList.add('show'); micIco.innerHTML='<rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor"/>'; };
+  recognition.onresult=e=>{ let t=''; for(let i=0;i<e.results.length;i++) t+=e.results[i][0].transcript; txtEl.value=t; onTI(txtEl); };
+  recognition.onerror=e=>{ stopRec(); showErr(e.error==='not-allowed'?'Permiso denegado. Ajustes → Chrome → Permisos → Micrófono.':e.error==='no-speech'?'No se detectó voz.':'Error al grabar.'); };
+  recognition.onend=()=>stopRec();
   recognition.start();
 }
-
-function stopRec() {
-  if(recognition) { try{recognition.stop();}catch(e){} recognition=null; }
-  isRecording = false; micBtn.classList.remove("recording"); recBar.classList.remove("show");
-  micIcon.innerHTML = '<rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/>';
+function stopRec(){
+  if(recognition){try{recognition.stop();}catch(e){} recognition=null;}
+  isRec=false; micBtn.classList.remove('on'); recBar.classList.remove('show');
+  micIco.innerHTML='<rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/>';
 }
 
-if (getKey()) {
-  addMsg("assistant", "Hola! Agendame lo que necesites. Podés escribir, tocar un chip o usar el micrófono.");
-}
+if(getKey()) addMsg('a','Hola! Decime qué querés agendar. Podés escribir, tocar un chip o usar el micrófono.');
 </script>
 </body>
 </html>
