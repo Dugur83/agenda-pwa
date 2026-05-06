@@ -1,4 +1,4 @@
-const CACHE = 'agenda-v2';
+const CACHE = 'agenda-v3';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', e => {
