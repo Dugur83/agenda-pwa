@@ -9,12 +9,10 @@
 <meta name="theme-color" content="#1a1a1a">
 <link rel="manifest" href="manifest.json">
 <title>Asistente de Agenda</title>
-<script src="https://accounts.google.com/gsi/client" async></script>
 <style>
   * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
   body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#f5f5f5; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
 
-  /* SETUP */
   #setup { display:none; position:fixed; inset:0; background:#fff; z-index:100; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px; overflow-y:auto; }
   #setup.show { display:flex; }
   .s-icon { width:64px; height:64px; border-radius:16px; background:#e8e8e8; display:flex; align-items:center; justify-content:center; margin-bottom:16px; flex-shrink:0; }
@@ -37,7 +35,6 @@
   #save-btn:disabled { opacity:0.4; }
   #s-err { font-size:13px; color:#e24b4a; margin-top:10px; text-align:center; min-height:18px; }
 
-  /* APP */
   #app { display:flex; flex-direction:column; height:100dvh; max-width:600px; margin:0 auto; width:100%; background:#fff; }
   #hdr { display:flex; align-items:center; gap:10px; padding:14px 16px; padding-top:max(14px,env(safe-area-inset-top)); border-bottom:1px solid #eee; background:#fff; flex-shrink:0; }
   #hdr-ico { width:36px; height:36px; border-radius:9px; background:#1a1a1a; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
@@ -86,7 +83,6 @@
 </head>
 <body>
 
-<!-- SETUP -->
 <div id="setup">
   <div class="s-icon">
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="2">
@@ -116,14 +112,13 @@
       <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
       Conectar Google Calendar
     </button>
-    <div class="s-hint" id="gcal-hint">Se abre una ventana para autorizar el acceso a tu calendario.</div>
+    <div class="s-hint" id="gcal-hint">Se conecta una sola vez y se renueva automático.</div>
   </div>
 
   <button id="save-btn" onclick="saveSetup()" disabled>Guardar y continuar</button>
   <div id="s-err"></div>
 </div>
 
-<!-- APP -->
 <div id="app">
   <div id="hdr">
     <div id="hdr-ico">
@@ -187,172 +182,172 @@
 <script>
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
-const GOOGLE_CLIENT_ID = '416327518709-oaubkf25uj94shc9vjdr660iuo913buh.apps.googleusercontent.com';
-const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+const CLIENT_ID = '416327518709-oaubkf25uj94shc9vjdr660iuo913buh.apps.googleusercontent.com';
+const REDIRECT  = 'https://agenda-pwa-wheat.vercel.app/api/callback';
+const SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
 
-const getKey  = () => localStorage.getItem('aak') || '';
-const getGTok = () => {
-  const d = localStorage.getItem('gtok');
+// ── TOKEN STORAGE ──
+const getKey = () => localStorage.getItem('aak') || '';
+const getAccessToken  = () => {
+  const d = localStorage.getItem('gat');
   if(!d) return null;
   const p = JSON.parse(d);
-  if(Date.now() > p.expires) { localStorage.removeItem('gtok'); return null; }
+  if(Date.now() > p.exp) { localStorage.removeItem('gat'); return null; }
   return p.token;
 };
-const setGTok = (token, expiresIn) => localStorage.setItem('gtok', JSON.stringify({ token, expires: Date.now() + expiresIn * 1000 - 60000 }));
+const setAccessToken = (token, expiresIn) =>
+  localStorage.setItem('gat', JSON.stringify({ token, exp: Date.now() + expiresIn*1000 - 60000 }));
+const getRefreshToken = () => localStorage.getItem('grt') || '';
+const setRefreshToken = t => { if(t) localStorage.setItem('grt', t); };
 
-let tokenClient = null;
-let lastEventId = null;
+// ── HANDLE OAUTH CALLBACK (tokens en el fragment) ──
+(function handleCallback() {
+  const hash = window.location.hash.slice(1);
+  if(!hash) return;
+  const p = new URLSearchParams(hash);
+  if(p.get('access_token')) {
+    setAccessToken(p.get('access_token'), parseInt(p.get('expires_in')||'3600'));
+    setRefreshToken(p.get('refresh_token'));
+    history.replaceState(null, '', '/');
+    updateBadge('badge-gcal', true);
+  }
+  const err = new URLSearchParams(window.location.search).get('auth_error');
+  if(err) { document.getElementById('s-err').textContent = 'Error Google: '+err; showSetup(); }
+})();
 
+async function ensureToken() {
+  let token = getAccessToken();
+  if(token) return token;
+  const rt = getRefreshToken();
+  if(!rt) throw new Error('NO_REFRESH');
+  const res = await fetch('/api/refresh?token='+encodeURIComponent(rt));
+  const data = await res.json();
+  if(data.error) throw new Error(data.error);
+  setAccessToken(data.access_token, data.expires_in || 3600);
+  return data.access_token;
+}
+
+// ── SETUP ──
 function showSetup() {
   document.getElementById('setup').classList.add('show');
   const k = getKey();
-  if(k) { document.getElementById('key-input').value = k; updateBadge('badge-aak', true); }
-  if(getGTok()) updateBadge('badge-gcal', true);
+  if(k) { document.getElementById('key-input').value=k; updateBadge('badge-aak',true); }
+  if(getRefreshToken()||getAccessToken()) {
+    updateBadge('badge-gcal',true);
+    document.getElementById('google-connect').classList.add('connected');
+    document.getElementById('google-connect').innerHTML='<span>✓ Google Calendar conectado</span>';
+  }
   checkSaveBtn();
 }
 
 function updateBadge(id, ok) {
   const b = document.getElementById(id);
-  b.textContent = ok ? 'Configurado ✓' : (id==='badge-aak' ? 'No configurada' : 'No conectado');
-  b.className = 's-badge ' + (ok ? 'badge-ok' : 'badge-no');
+  b.textContent = ok ? 'Configurado ✓' : (id==='badge-aak'?'No configurada':'No conectado');
+  b.className = 's-badge '+(ok?'badge-ok':'badge-no');
 }
 
 function onKI() {
-  const v = document.getElementById('key-input').value.trim();
-  updateBadge('badge-aak', v.startsWith('sk-ant-'));
+  updateBadge('badge-aak', document.getElementById('key-input').value.trim().startsWith('sk-ant-'));
   checkSaveBtn();
 }
 
 function checkSaveBtn() {
-  const hasKey = document.getElementById('key-input').value.trim().startsWith('sk-ant-');
-  const hasGcal = !!getGTok();
+  const hasKey  = document.getElementById('key-input').value.trim().startsWith('sk-ant-');
+  const hasGcal = !!(getRefreshToken() || getAccessToken());
   document.getElementById('save-btn').disabled = !(hasKey && hasGcal);
 }
 
 function connectGoogle() {
-  if(!window.google) { document.getElementById('s-err').textContent = 'Cargando Google... intentá en un segundo.'; return; }
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CLIENT_ID,
-    scope: GCAL_SCOPE,
-    callback: (resp) => {
-      if(resp.error) { document.getElementById('s-err').textContent = 'Error: ' + resp.error; return; }
-      setGTok(resp.access_token, resp.expires_in);
-      updateBadge('badge-gcal', true);
-      document.getElementById('gcal-hint').textContent = 'Conectado!';
-      document.getElementById('google-connect').classList.add('connected');
-      document.getElementById('google-connect').innerHTML = '<span>✓ Google Calendar conectado</span>';
-      checkSaveBtn();
-    }
+  const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+    client_id:     CLIENT_ID,
+    redirect_uri:  REDIRECT,
+    response_type: 'code',
+    scope:         SCOPE,
+    access_type:   'offline',
+    prompt:        'consent'
   });
-  tokenClient.requestAccessToken();
+  window.location.href = url;
 }
 
 function saveSetup() {
   const v = document.getElementById('key-input').value.trim();
-  if(!v.startsWith('sk-ant-')) { document.getElementById('s-err').textContent = 'API key inválida.'; return; }
+  if(!v.startsWith('sk-ant-')) { document.getElementById('s-err').textContent='API key inválida.'; return; }
   localStorage.setItem('aak', v);
   document.getElementById('setup').classList.remove('show');
   if(!document.getElementById('msgs').children.length)
-    addMsg('a', 'Hola! Agendame lo que necesites. Podés escribir, tocar un chip o usar el micrófono.');
+    addMsg('a','Hola! Agendame lo que necesites. Podés escribir, tocar un chip o usar el micrófono.');
 }
 
-if(!getKey() || !getGTok()) showSetup();
+if(!getKey() || (!getAccessToken() && !getRefreshToken())) showSetup();
 
-const today = new Date().toLocaleDateString('es-AR', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
-const msgsEl = document.getElementById('msgs');
-const txtEl  = document.getElementById('txt');
-const sndBtn = document.getElementById('snd');
-const micBtn = document.getElementById('mic');
-const micIco = document.getElementById('mic-ico');
-const recBar = document.getElementById('rec-bar');
-const errBar = document.getElementById('err-bar');
-let history = [], busy = false, recognition = null, isRec = false, silenceTimer = null;
+// ── APP ──
+const today = new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const msgsEl=document.getElementById('msgs'), txtEl=document.getElementById('txt');
+const sndBtn=document.getElementById('snd'), micBtn=document.getElementById('mic');
+const micIco=document.getElementById('mic-ico'), recBar=document.getElementById('rec-bar');
+const errBar=document.getElementById('err-bar');
+let history=[], busy=false, recognition=null, isRec=false, silenceTimer=null, lastEventId=null;
 
-function si(v) { txtEl.value = v; txtEl.focus(); onTI(txtEl); }
-function onTI(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; sndBtn.disabled=busy||!el.value.trim(); }
-function showErr(m) { errBar.textContent=m; errBar.classList.add('show'); setTimeout(()=>errBar.classList.remove('show'),5000); }
+function si(v){txtEl.value=v;txtEl.focus();onTI(txtEl);}
+function onTI(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px';sndBtn.disabled=busy||!el.value.trim();}
+function showErr(m){errBar.textContent=m;errBar.classList.add('show');setTimeout(()=>errBar.classList.remove('show'),5000);}
 
-function addMsg(role, text) {
-  const row=document.createElement('div'); row.className='row'+(role==='u'?' u':'');
-  if(role!=='u') { const av=document.createElement('div'); av.className='av'; av.textContent='A'; row.appendChild(av); }
-  const b=document.createElement('div'); b.className='bbl '+role; b.textContent=text;
-  row.appendChild(b); msgsEl.appendChild(row); msgsEl.scrollTop=msgsEl.scrollHeight;
+function addMsg(role,text){
+  const row=document.createElement('div');row.className='row'+(role==='u'?' u':'');
+  if(role!=='u'){const av=document.createElement('div');av.className='av';av.textContent='A';row.appendChild(av);}
+  const b=document.createElement('div');b.className='bbl '+role;b.textContent=text;
+  row.appendChild(b);msgsEl.appendChild(row);msgsEl.scrollTop=msgsEl.scrollHeight;
 }
-function addTyping() {
-  const row=document.createElement('div'); row.className='row'; row.id='trow';
-  const av=document.createElement('div'); av.className='av'; av.textContent='A'; row.appendChild(av);
-  const b=document.createElement('div'); b.className='bbl a';
+function addTyping(){
+  const row=document.createElement('div');row.className='row';row.id='trow';
+  const av=document.createElement('div');av.className='av';av.textContent='A';row.appendChild(av);
+  const b=document.createElement('div');b.className='bbl a';
   b.innerHTML='<span class="dots"><span></span><span></span><span></span></span>';
-  row.appendChild(b); msgsEl.appendChild(row); msgsEl.scrollTop=msgsEl.scrollHeight;
+  row.appendChild(b);msgsEl.appendChild(row);msgsEl.scrollTop=msgsEl.scrollHeight;
 }
-function rmTyping() { const e=document.getElementById('trow'); if(e)e.remove(); }
+function rmTyping(){const e=document.getElementById('trow');if(e)e.remove();}
 
-async function getToken() {
-  let token = getGTok();
-  if(token) return token;
-  return new Promise((resolve, reject) => {
-    if(!tokenClient) {
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID, scope: GCAL_SCOPE,
-        callback: (resp) => {
-          if(resp.error){ reject(resp.error); return; }
-          setGTok(resp.access_token, resp.expires_in);
-          updateBadge('badge-gcal', true);
-          resolve(resp.access_token);
-        }
-      });
-    }
-    tokenClient.requestAccessToken();
-  });
-}
-
-async function createGCalEvent(ev) {
-  const token = await getToken();
-  const body = {
-    summary: ev.title,
-    start: { dateTime: ev.start+'-03:00', timeZone:'America/Argentina/Buenos_Aires' },
-    end:   { dateTime: ev.end  +'-03:00', timeZone:'America/Argentina/Buenos_Aires' },
-  };
-  if(ev.location)  body.location    = ev.location;
-  if(ev.colorId)   body.colorId     = ev.colorId;
-  if(ev.reminders) body.reminders   = { useDefault:false, overrides:ev.reminders };
-  const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-    method:'POST',
-    headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
-    body: JSON.stringify(body)
-  });
+async function createGCalEvent(ev){
+  const token=await ensureToken();
+  const body={summary:ev.title,
+    start:{dateTime:ev.start+'-03:00',timeZone:'America/Argentina/Buenos_Aires'},
+    end:{dateTime:ev.end+'-03:00',timeZone:'America/Argentina/Buenos_Aires'}};
+  if(ev.location)  body.location  =ev.location;
+  if(ev.colorId)   body.colorId   =ev.colorId;
+  if(ev.reminders) body.reminders ={useDefault:false,overrides:ev.reminders};
+  const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
+    method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify(body)});
   return res.json();
 }
 
-async function updateGCalEvent(eventId, changes) {
-  const token = await getToken();
-  const body = {};
-  if(changes.title)    body.summary   = changes.title;
-  if(changes.start)    body.start     = { dateTime:changes.start+'-03:00', timeZone:'America/Argentina/Buenos_Aires' };
-  if(changes.end)      body.end       = { dateTime:changes.end  +'-03:00', timeZone:'America/Argentina/Buenos_Aires' };
-  if(changes.location) body.location  = changes.location;
-  if(changes.colorId)  body.colorId   = changes.colorId;
-  if(changes.reminders) body.reminders = { useDefault:false, overrides:changes.reminders };
-  const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'+eventId, {
-    method:'PATCH',
-    headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
-    body: JSON.stringify(body)
-  });
+async function updateGCalEvent(id,ch){
+  const token=await ensureToken();
+  const body={};
+  if(ch.title)    body.summary  =ch.title;
+  if(ch.start)    body.start    ={dateTime:ch.start+'-03:00',timeZone:'America/Argentina/Buenos_Aires'};
+  if(ch.end)      body.end      ={dateTime:ch.end+'-03:00',timeZone:'America/Argentina/Buenos_Aires'};
+  if(ch.location) body.location =ch.location;
+  if(ch.colorId)  body.colorId  =ch.colorId;
+  if(ch.reminders)body.reminders={useDefault:false,overrides:ch.reminders};
+  const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'+id,{
+    method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify(body)});
   return res.json();
 }
 
-function formatConfirm(ev, isUpdate=false) {
-  const d = new Date(ev.start || ev.changes?.start);
-  const fecha = d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
-  const hora  = d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-  const titulo = ev.title || ev.changes?.title || '';
-  let txt = (isUpdate ? 'Evento actualizado!' : 'Listo! Evento guardado.') + '\n\n📅 '+titulo+'\n🗓 '+fecha+' a las '+hora;
-  const loc = ev.location || ev.changes?.location;
-  if(loc) txt += '\n📍 '+loc;
+function formatConfirm(ev,isUpdate=false){
+  const d=new Date(ev.start||ev.changes?.start);
+  const fecha=d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+  const hora=d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  const titulo=ev.title||ev.changes?.title||'';
+  let txt=(isUpdate?'Evento actualizado!':'Listo! Evento guardado.')+'\n\n📅 '+titulo+'\n🗓 '+fecha+' a las '+hora;
+  const loc=ev.location||ev.changes?.location;
+  if(loc) txt+='\n📍 '+loc;
   return txt;
 }
 
-const SYSTEM = `Sos un asistente de agenda. El usuario está en Buenos Aires, Argentina (UTC-3). Hoy es ${today}.
+const SYSTEM=`Sos un asistente de agenda. El usuario está en Buenos Aires, Argentina (UTC-3). Hoy es ${today}.
 
 Interpretá lo que el usuario quiere hacer y devolvé ÚNICAMENTE un JSON válido. Sin texto extra, sin markdown. Solo JSON puro.
 
@@ -366,124 +361,106 @@ COLORES (colorId):
 - SIEMPRE laboral colorId "3" violeta: REUNION, OBRAS, CALL, JORNADA
 - SIEMPRE personal colorId "11" rojo: TURNO, CENA
 - PREGUNTAR si es laboral o personal: PAGO, LLAMADA, BANCO, RETIRO
-- Sin etiqueta: si dice laboral→"3", personal→"11", si no especifica→omitir
-- Si el usuario ya aclaró laboral o personal en su mensaje, usalo directamente sin preguntar
+- Sin etiqueta: laboral→"3", personal→"11", sin especificar→omitir
+- Si el usuario ya aclaró laboral o personal en su mensaje, usalo directamente
 
 RECORDATORIOS: array de {method:"popup",minutes:N} solo si el usuario los pide.
 
-CORRECCIONES: Si el usuario pide modificar, corregir o cambiar el último evento, devolvé:
+CORRECCIONES: Si el usuario pide modificar o corregir el último evento devolvé:
 {"action":"update","changes":{solo los campos que cambian}}
 
-Para eventos nuevos, si falta la hora: {"need_more":"pregunta breve en español rioplatense"}
-Para eventos nuevos con todo: {"action":"create","title":"TITULO","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","location":"opcional","colorId":"opcional","reminders":[]}
+Para eventos nuevos sin hora: {"need_more":"pregunta breve en español rioplatense"}
+Para eventos nuevos completos: {"action":"create","title":"TITULO","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","location":"opcional","colorId":"opcional","reminders":[]}
 
-Sin duración → asumir 1 hora. Nunca uses tildes en los prefijos de etiquetas. Nunca uses ¿ ni ¡.`;
+Sin duración → asumir 1 hora. Nunca uses tildes en prefijos. Nunca uses ¿ ni ¡.`;
 
-async function send() {
-  const text = txtEl.value.trim();
-  if(!text || busy) return;
-  const key = getKey(); if(!key) { showSetup(); return; }
-
-  busy=true; sndBtn.disabled=true;
+async function send(){
+  const text=txtEl.value.trim();
+  if(!text||busy) return;
+  const key=getKey();if(!key){showSetup();return;}
+  busy=true;sndBtn.disabled=true;
   history.push({role:'user',content:text});
   addMsg('u',text);
-  txtEl.value=''; txtEl.style.height='auto';
+  txtEl.value='';txtEl.style.height='auto';
   addTyping();
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key':key,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body:JSON.stringify({ model:'claude-haiku-4-5-20251001', max_tokens:500, system:SYSTEM, messages:history })
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,system:SYSTEM,messages:history})
     });
-    const data = await res.json();
+    const data=await res.json();
     rmTyping();
-
-    if(data.error) {
-      addMsg('a', data.error.type==='authentication_error' ? 'API key inválida. Tocá ⚙️ para cambiarla.' : 'Error: '+data.error.message);
+    if(data.error){
+      addMsg('a',data.error.type==='authentication_error'?'API key inválida. Tocá ⚙️ para cambiarla.':'Error: '+data.error.message);
     } else {
-      const raw = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+      const raw=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
       history.push({role:'assistant',content:raw});
-      try {
-        const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
-        if(parsed.need_more) {
-          addMsg('a', parsed.need_more);
-        } else if(parsed.action === 'update') {
-          if(!lastEventId) { addMsg('a','No encontré el evento anterior para modificar.'); }
-          else {
+      try{
+        const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+        if(parsed.need_more){
+          addMsg('a',parsed.need_more);
+        } else if(parsed.action==='update'){
+          if(!lastEventId){addMsg('a','No encontré el evento anterior para modificar.');}
+          else{
             addMsg('a','Actualizando evento...');
-            try {
-              const updated = await updateGCalEvent(lastEventId, parsed.changes);
-              if(updated.id) {
-                msgsEl.lastChild.querySelector('.bbl').textContent = formatConfirm(parsed, true);
-              } else {
-                msgsEl.lastChild.querySelector('.bbl').textContent = 'Error al actualizar: '+(updated.error?.message||'desconocido');
-              }
-            } catch(e) { msgsEl.lastChild.querySelector('.bbl').textContent = 'Error al conectar con Google Calendar.'; }
+            try{
+              const updated=await updateGCalEvent(lastEventId,parsed.changes);
+              msgsEl.lastChild.querySelector('.bbl').textContent=updated.id?formatConfirm(parsed,true):'Error: '+(updated.error?.message||'desconocido');
+            }catch(e){msgsEl.lastChild.querySelector('.bbl').textContent='Error al conectar con Google Calendar.';}
           }
-        } else if(parsed.action === 'create') {
+        } else if(parsed.action==='create'){
           addMsg('a','Guardando en tu calendario...');
-          try {
-            const created = await createGCalEvent(parsed);
-            if(created.id) {
-              lastEventId = created.id;
-              msgsEl.lastChild.querySelector('.bbl').textContent = formatConfirm(parsed);
+          try{
+            const created=await createGCalEvent(parsed);
+            if(created.id){lastEventId=created.id;msgsEl.lastChild.querySelector('.bbl').textContent=formatConfirm(parsed);}
+            else msgsEl.lastChild.querySelector('.bbl').textContent='Error: '+(created.error?.message||'desconocido');
+          }catch(e){
+            if(e.message==='NO_REFRESH'){
+              msgsEl.lastChild.querySelector('.bbl').textContent='Sesión expirada. Tocá ⚙️ para reconectar Google.';
+              showSetup();
             } else {
-              msgsEl.lastChild.querySelector('.bbl').textContent = 'Error al guardar: '+(created.error?.message||'desconocido');
+              msgsEl.lastChild.querySelector('.bbl').textContent='Error al guardar. Verificá tu conexión.';
             }
-          } catch(e) { msgsEl.lastChild.querySelector('.bbl').textContent = 'Error al conectar con Google Calendar. Tocá ⚙️ para reconectar.'; }
-        } else {
-          addMsg('a', raw);
-        }
-      } catch(e) { addMsg('a', raw); }
+          }
+        } else {addMsg('a',raw);}
+      }catch(e){addMsg('a',raw);}
     }
-  } catch(e) { rmTyping(); addMsg('a','Error de conexión. Verificá tu internet.'); }
-  busy=false; sndBtn.disabled=!txtEl.value.trim(); txtEl.focus();
+  }catch(e){rmTyping();addMsg('a','Error de conexión. Verificá tu internet.');}
+  busy=false;sndBtn.disabled=!txtEl.value.trim();txtEl.focus();
 }
 
-txtEl.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} });
+txtEl.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
 
-function toggleMic() { isRec ? stopRec() : startRec(); }
-function startRec() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR) { showErr('Tu navegador no soporta voz. Usá Chrome.'); return; }
-  recognition = new SR();
-  recognition.lang = 'es-AR';
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.onstart = () => {
-    isRec=true; micBtn.classList.add('on'); recBar.classList.add('show');
-    micIco.innerHTML='<rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor"/>';
-  };
-  recognition.onresult = e => {
-    let t='';
-    for(let i=0;i<e.results.length;i++) t+=e.results[i][0].transcript;
-    txtEl.value=t; onTI(txtEl);
+function toggleMic(){isRec?stopRec():startRec();}
+function startRec(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){showErr('Tu navegador no soporta voz. Usá Chrome.');return;}
+  recognition=new SR();recognition.lang='es-AR';recognition.continuous=true;recognition.interimResults=true;
+  recognition.onstart=()=>{isRec=true;micBtn.classList.add('on');recBar.classList.add('show');micIco.innerHTML='<rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor"/>';};
+  recognition.onresult=e=>{
+    let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
+    txtEl.value=t;onTI(txtEl);
     clearTimeout(silenceTimer);
-    silenceTimer = setTimeout(() => { if(isRec) stopRec(); }, 2500);
+    silenceTimer=setTimeout(()=>{if(isRec)stopRec();},2500);
   };
-  recognition.onerror = e => {
+  recognition.onerror=e=>{
     stopRec();
-    if(e.error==='not-allowed') showErr('Permiso denegado. Ajustes → Chrome → Permisos → Micrófono.');
-    else if(e.error==='no-speech') showErr('No se detectó voz. Intentá de nuevo.');
-    else if(e.error !== 'aborted') showErr('Error al grabar. Intentá de nuevo.');
+    if(e.error==='not-allowed')showErr('Permiso denegado. Ajustes → Chrome → Permisos → Micrófono.');
+    else if(e.error==='no-speech')showErr('No se detectó voz. Intentá de nuevo.');
+    else if(e.error!=='aborted')showErr('Error al grabar.');
   };
-  recognition.onend = () => { if(isRec) stopRec(); };
+  recognition.onend=()=>{if(isRec)stopRec();};
   recognition.start();
 }
-function stopRec() {
+function stopRec(){
   clearTimeout(silenceTimer);
-  if(recognition){try{recognition.stop();}catch(e){} recognition=null;}
-  isRec=false; micBtn.classList.remove('on'); recBar.classList.remove('show');
+  if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
+  isRec=false;micBtn.classList.remove('on');recBar.classList.remove('show');
   micIco.innerHTML='<rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/>';
 }
 
-if(getKey() && getGTok())
+if(getKey()&&(getAccessToken()||getRefreshToken()))
   addMsg('a','Hola! Agendame lo que necesites. Podés escribir, tocar un chip o usar el micrófono.');
 </script>
 </body>
