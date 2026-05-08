@@ -393,7 +393,7 @@ CORRECCIONES: Si el usuario pide modificar o corregir el último evento devolvé
 {"action":"update","changes":{solo los campos que cambian}}
 
 BORRAR: Si el usuario pide borrar o eliminar un evento devolvé:
-{"action":"delete","search":"texto para buscar el evento, puede ser nombre, fecha o ambos"}
+{"action":"delete","search":"el título EXACTO del evento tal como quedó guardado, con el prefijo en mayúsculas. Ejemplo: REUNION - Diego"}
 
 Para eventos nuevos sin hora: {"need_more":"pregunta breve en español rioplatense"}
 Para eventos nuevos completos: {"action":"create","title":"TITULO","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","location":"opcional","colorId":"opcional","reminders":[]}
