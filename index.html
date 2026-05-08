@@ -336,6 +336,29 @@ async function updateGCalEvent(id,ch){
   return res.json();
 }
 
+async function searchAndDeleteEvent(searchText){
+  const token=await ensureToken();
+  // Buscar el evento por texto
+  const params=new URLSearchParams({q:searchText,maxResults:'5',orderBy:'startTime',singleEvents:'true',
+    timeMin:new Date(Date.now()-30*24*60*60*1000).toISOString()});
+  const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?'+params,{
+    headers:{'Authorization':'Bearer '+token}});
+  const data=await res.json();
+  if(!data.items||data.items.length===0) return {found:false};
+  // Tomar el más reciente
+  const ev=data.items[0];
+  const delRes=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'+ev.id,{
+    method:'DELETE',headers:{'Authorization':'Bearer '+token}});
+  return {found:true,deleted:delRes.status===204,title:ev.summary};
+}
+
+async function deleteGCalEvent(id){
+  const token=await ensureToken();
+  const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'+id,{
+    method:'DELETE',headers:{'Authorization':'Bearer '+token}});
+  return res.status;
+}
+
 function formatConfirm(ev,isUpdate=false){
   const d=new Date(ev.start||ev.changes?.start);
   const fecha=d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
@@ -351,11 +374,11 @@ const SYSTEM=`Sos un asistente de agenda. El usuario está en Buenos Aires, Arge
 
 Interpretá lo que el usuario quiere hacer y devolvé ÚNICAMENTE un JSON válido. Sin texto extra, sin markdown. Solo JSON puro.
 
-TITULOS (prefijo MAYUSCULAS sin tildes - espacio - guion - espacio - nombre):
-Reuniones→"REUNION - [nombre]" | Turnos→"TURNO - [nombre]" | Obras→"OBRAS - [nombre]"
-Pagos→"PAGO - [nombre]" | Llamadas→"LLAMADA - [nombre]" | Banco→"BANCO - [nombre]"
-Calls→"CALL - [nombre]" | Cenas→"CENA - [nombre]" | Retiros→"RETIRO - [nombre]"
-Jornadas→"JORNADA - [nombre]" | Otros→solo el nombre sin prefijo
+TITULOS (prefijo MAYUSCULAS sin tildes - espacio - guion - espacio - Nombre con primera letra mayuscula):
+Reuniones→"REUNION - [Nombre]" | Turnos→"TURNO - [Nombre]" | Obras→"OBRAS - [Nombre]"
+Pagos→"PAGO - [Nombre]" | Llamadas→"LLAMADA - [Nombre]" | Banco→"BANCO - [Nombre]"
+Calls→"CALL - [Nombre]" | Cenas→"CENA - [Nombre]" | Retiros→"RETIRO - [Nombre]"
+Jornadas→"JORNADA - [Nombre]" | Otros→solo el nombre con primera letra mayuscula sin prefijo
 
 COLORES (colorId):
 - SIEMPRE laboral colorId "3" violeta: REUNION, OBRAS, CALL, JORNADA
@@ -368,6 +391,9 @@ RECORDATORIOS: array de {method:"popup",minutes:N} solo si el usuario los pide.
 
 CORRECCIONES: Si el usuario pide modificar o corregir el último evento devolvé:
 {"action":"update","changes":{solo los campos que cambian}}
+
+BORRAR: Si el usuario pide borrar o eliminar un evento devolvé:
+{"action":"delete","search":"texto para buscar el evento, puede ser nombre, fecha o ambos"}
 
 Para eventos nuevos sin hora: {"need_more":"pregunta breve en español rioplatense"}
 Para eventos nuevos completos: {"action":"create","title":"TITULO","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","location":"opcional","colorId":"opcional","reminders":[]}
@@ -400,6 +426,22 @@ async function send(){
         const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
         if(parsed.need_more){
           addMsg('a',parsed.need_more);
+        } else if(parsed.action==='delete'){
+          addMsg('a','Buscando evento...');
+          try{
+            const searchTerm=parsed.search||'';
+            let result;
+            if(lastEventId&&!searchTerm){
+              const status=await deleteGCalEvent(lastEventId);
+              result={found:true,deleted:status===204,title:'el evento'};
+              if(status===204)lastEventId=null;
+            } else {
+              result=await searchAndDeleteEvent(searchTerm);
+            }
+            if(!result.found)msgsEl.lastChild.querySelector('.bbl').textContent='No encontré el evento. Intentá ser más específico.';
+            else if(result.deleted)msgsEl.lastChild.querySelector('.bbl').textContent='Listo! "'+result.title+'" eliminado del calendario.';
+            else msgsEl.lastChild.querySelector('.bbl').textContent='Error al eliminar el evento.';
+          }catch(e){msgsEl.lastChild.querySelector('.bbl').textContent='Error al conectar con Google Calendar.';}
         } else if(parsed.action==='update'){
           if(!lastEventId){addMsg('a','No encontré el evento anterior para modificar.');}
           else{
