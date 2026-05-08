@@ -286,7 +286,7 @@ const msgsEl=document.getElementById('msgs'), txtEl=document.getElementById('txt
 const sndBtn=document.getElementById('snd'), micBtn=document.getElementById('mic');
 const micIco=document.getElementById('mic-ico'), recBar=document.getElementById('rec-bar');
 const errBar=document.getElementById('err-bar');
-let history=[], busy=false, recognition=null, isRec=false, silenceTimer=null, lastEventId=null;
+let history=[], busy=false, recognition=null, isRec=false, lastEventId=null;
 
 function si(v){txtEl.value=v;txtEl.focus();onTI(txtEl);}
 function onTI(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px';sndBtn.disabled=busy||!el.value.trim();}
@@ -436,13 +436,12 @@ function toggleMic(){isRec?stopRec():startRec();}
 function startRec(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){showErr('Tu navegador no soporta voz. Usá Chrome.');return;}
-  recognition=new SR();recognition.lang='es-AR';recognition.continuous=true;recognition.interimResults=true;
+  recognition=new SR();recognition.lang='es-AR';recognition.continuous=false;recognition.interimResults=true;
   recognition.onstart=()=>{isRec=true;micBtn.classList.add('on');recBar.classList.add('show');micIco.innerHTML='<rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor"/>';};
   recognition.onresult=e=>{
-    let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
+    let t='';
+    for(let i=0;i<e.results.length;i++) t+=e.results[i][0].transcript;
     txtEl.value=t;onTI(txtEl);
-    clearTimeout(silenceTimer);
-    silenceTimer=setTimeout(()=>{if(isRec)stopRec();},2500);
   };
   recognition.onerror=e=>{
     stopRec();
@@ -454,7 +453,6 @@ function startRec(){
   recognition.start();
 }
 function stopRec(){
-  clearTimeout(silenceTimer);
   if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
   isRec=false;micBtn.classList.remove('on');recBar.classList.remove('show');
   micIco.innerHTML='<rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/>';
