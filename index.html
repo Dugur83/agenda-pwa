@@ -13,6 +13,7 @@
   * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
   body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#f5f5f5; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
 
+  /* SETUP */
   #setup { display:none; position:fixed; inset:0; background:#fff; z-index:100; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px; overflow-y:auto; }
   #setup.show { display:flex; }
   .s-icon { width:64px; height:64px; border-radius:16px; background:#e8e8e8; display:flex; align-items:center; justify-content:center; margin-bottom:16px; flex-shrink:0; }
@@ -35,6 +36,19 @@
   #save-btn:disabled { opacity:0.4; }
   #s-err { font-size:13px; color:#e24b4a; margin-top:10px; text-align:center; min-height:18px; }
 
+  /* PICKER MODAL */
+  #picker { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; align-items:flex-end; }
+  #picker.show { display:flex; }
+  #picker-box { background:#fff; border-radius:20px 20px 0 0; padding:20px 16px; width:100%; max-height:70vh; overflow-y:auto; }
+  #picker-title { font-size:14px; font-weight:600; color:#1a1a1a; margin-bottom:4px; }
+  #picker-sub { font-size:12px; color:#888; margin-bottom:14px; }
+  .picker-item { display:flex; flex-direction:column; padding:12px 14px; border:1px solid #eee; border-radius:12px; margin-bottom:8px; cursor:pointer; }
+  .picker-item:active { background:#f5f5f5; }
+  .picker-item-title { font-size:14px; font-weight:500; color:#1a1a1a; }
+  .picker-item-date { font-size:12px; color:#888; margin-top:2px; }
+  #picker-cancel { width:100%; padding:12px; background:#f5f5f5; border:none; border-radius:12px; font-size:14px; color:#666; cursor:pointer; margin-top:4px; }
+
+  /* APP */
   #app { display:flex; flex-direction:column; height:100dvh; max-width:600px; margin:0 auto; width:100%; background:#fff; }
   #hdr { display:flex; align-items:center; gap:10px; padding:14px 16px; padding-top:max(14px,env(safe-area-inset-top)); border-bottom:1px solid #eee; background:#fff; flex-shrink:0; }
   #hdr-ico { width:36px; height:36px; border-radius:9px; background:#1a1a1a; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
@@ -56,6 +70,14 @@
   @keyframes td{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-5px);opacity:1}}
 
   #foot { padding:10px 12px; padding-bottom:max(16px,env(safe-area-inset-bottom)); border-top:1px solid #eee; background:#fff; flex-shrink:0; }
+
+  /* HISTORIAL */
+  #historial { margin-bottom:10px; }
+  #hist-toggle { font-size:11px; color:#888; background:none; border:none; cursor:pointer; padding:0 2px; display:flex; align-items:center; gap:4px; margin-bottom:6px; }
+  #hist-list { display:none; flex-direction:column; gap:5px; margin-bottom:8px; }
+  #hist-list.show { display:flex; }
+  .hist-item { font-size:12px; padding:6px 12px; background:#f8f8f8; border-radius:8px; border:1px solid #eee; color:#444; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
   #chips { display:flex; gap:6px; margin-bottom:10px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
   #chips::-webkit-scrollbar { display:none; }
   .chip { font-size:12px; padding:6px 13px; border-radius:20px; border:1px solid #ddd; background:#f8f8f8; color:#444; cursor:pointer; white-space:nowrap; flex-shrink:0; user-select:none; }
@@ -83,6 +105,7 @@
 </head>
 <body>
 
+<!-- SETUP -->
 <div id="setup">
   <div class="s-icon">
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="2">
@@ -91,34 +114,35 @@
   </div>
   <div class="s-title">Configuración</div>
   <div class="s-desc">Configurá tu API key y conectá Google Calendar para empezar.</div>
-
   <div class="s-section">
-    <div class="s-label">
-      API Key de Anthropic
-      <span id="badge-aak" class="s-badge badge-no">No configurada</span>
-    </div>
+    <div class="s-label">API Key de Anthropic <span id="badge-aak" class="s-badge badge-no">No configurada</span></div>
     <input id="key-input" class="s-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false" oninput="onKI()">
     <div class="s-hint">Conseguila en <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys</div>
   </div>
-
   <hr class="s-divider">
-
   <div class="s-section">
-    <div class="s-label">
-      Google Calendar
-      <span id="badge-gcal" class="s-badge badge-no">No conectado</span>
-    </div>
+    <div class="s-label">Google Calendar <span id="badge-gcal" class="s-badge badge-no">No conectado</span></div>
     <button id="google-connect" onclick="connectGoogle()">
       <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
       Conectar Google Calendar
     </button>
     <div class="s-hint" id="gcal-hint">Se conecta una sola vez y se renueva automático.</div>
   </div>
-
   <button id="save-btn" onclick="saveSetup()" disabled>Guardar y continuar</button>
   <div id="s-err"></div>
 </div>
 
+<!-- PICKER MODAL -->
+<div id="picker">
+  <div id="picker-box">
+    <div id="picker-title">Elegí el evento</div>
+    <div id="picker-sub">Tocá el que querés</div>
+    <div id="picker-items"></div>
+    <button id="picker-cancel" onclick="closePicker()">Cancelar</button>
+  </div>
+</div>
+
+<!-- APP -->
 <div id="app">
   <div id="hdr">
     <div id="hdr-ico">
@@ -127,10 +151,7 @@
         <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
       </svg>
     </div>
-    <div style="flex:1">
-      <div id="hdr-t">Asistente de agenda</div>
-      <div id="hdr-s">Google Calendar · Buenos Aires</div>
-    </div>
+    <div style="flex:1"><div id="hdr-t">Asistente de agenda</div><div id="hdr-s">Google Calendar · Buenos Aires</div></div>
     <div id="dot"></div>
     <button id="cfg-btn" onclick="showSetup()" title="Configuración">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -142,6 +163,13 @@
   <div id="msgs"></div>
 
   <div id="foot">
+    <div id="historial">
+      <button id="hist-toggle" onclick="toggleHistorial()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Recientes
+      </button>
+      <div id="hist-list"></div>
+    </div>
     <div id="chips">
       <span class="chip" onclick="si('Reunion con ')">REUNION</span>
       <span class="chip" onclick="si('Turno con ')">TURNO</span>
@@ -154,20 +182,13 @@
       <span class="chip" onclick="si('Retiro: ')">RETIRO</span>
       <span class="chip" onclick="si('Jornada: ')">JORNADA</span>
     </div>
-    <div id="rec-bar">
-      <div id="rec-dot"></div>
-      <span id="rec-txt">Escuchando... hablá ahora</span>
-      <button id="stop-btn" onclick="stopRec()">Detener</button>
-    </div>
+    <div id="rec-bar"><div id="rec-dot"></div><span id="rec-txt">Escuchando... hablá ahora</span><button id="stop-btn" onclick="stopRec()">Detener</button></div>
     <div id="err-bar"></div>
     <div id="irow">
       <textarea id="txt" rows="1" placeholder="Escribí o usá el micrófono..." oninput="onTI(this)"></textarea>
       <button class="br" id="mic" onclick="toggleMic()">
         <svg id="mic-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="9" y="2" width="6" height="11" rx="3"/>
-          <path d="M5 10a7 7 0 0 0 14 0"/>
-          <line x1="12" y1="19" x2="12" y2="22"/>
-          <line x1="9" y1="22" x2="15" y2="22"/>
+          <rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/>
         </svg>
       </button>
       <button class="br" id="snd" onclick="send()" disabled>
@@ -182,116 +203,112 @@
 <script>
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
-const CLIENT_ID = '416327518709-oaubkf25uj94shc9vjdr660iuo913buh.apps.googleusercontent.com';
-const REDIRECT  = 'https://agenda-pwa-wheat.vercel.app/api/callback';
-const SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
+const CLIENT_ID='416327518709-oaubkf25uj94shc9vjdr660iuo913buh.apps.googleusercontent.com';
+const REDIRECT='https://agenda-pwa-wheat.vercel.app/api/callback';
+const SCOPE='https://www.googleapis.com/auth/calendar.events';
 
-// ── TOKEN STORAGE ──
-const getKey = () => localStorage.getItem('aak') || '';
-const getAccessToken  = () => {
-  const d = localStorage.getItem('gat');
-  if(!d) return null;
-  const p = JSON.parse(d);
-  if(Date.now() > p.exp) { localStorage.removeItem('gat'); return null; }
-  return p.token;
+// ── STORAGE ──
+const getKey=()=>localStorage.getItem('aak')||'';
+const getAccessToken=()=>{const d=localStorage.getItem('gat');if(!d)return null;const p=JSON.parse(d);if(Date.now()>p.exp){localStorage.removeItem('gat');return null;}return p.token;};
+const setAccessToken=(t,e)=>localStorage.setItem('gat',JSON.stringify({token:t,exp:Date.now()+e*1000-60000}));
+const getRefreshToken=()=>localStorage.getItem('grt')||'';
+const setRefreshToken=t=>{if(t)localStorage.setItem('grt',t);};
+
+// Último evento entre sesiones
+const getLastEventId=()=>localStorage.getItem('lei')||null;
+const setLastEventId=id=>{if(id)localStorage.setItem('lei',id);else localStorage.removeItem('lei');};
+
+// Historial
+const getHistorial=()=>JSON.parse(localStorage.getItem('hist')||'[]');
+const addToHistorial=ev=>{
+  let h=getHistorial();
+  h.unshift({id:ev.id,title:ev.title,date:ev.start});
+  if(h.length>8) h=h.slice(0,8);
+  localStorage.setItem('hist',JSON.stringify(h));
+  renderHistorial();
 };
-const setAccessToken = (token, expiresIn) =>
-  localStorage.setItem('gat', JSON.stringify({ token, exp: Date.now() + expiresIn*1000 - 60000 }));
-const getRefreshToken = () => localStorage.getItem('grt') || '';
-const setRefreshToken = t => { if(t) localStorage.setItem('grt', t); };
 
-// ── HANDLE OAUTH CALLBACK (tokens en el fragment) ──
-(function handleCallback() {
-  const hash = window.location.hash.slice(1);
-  if(!hash) return;
-  const p = new URLSearchParams(hash);
-  if(p.get('access_token')) {
-    setAccessToken(p.get('access_token'), parseInt(p.get('expires_in')||'3600'));
+function renderHistorial(){
+  const h=getHistorial();
+  const list=document.getElementById('hist-list');
+  const toggle=document.getElementById('hist-toggle');
+  if(!h.length){toggle.style.display='none';return;}
+  toggle.style.display='flex';
+  list.innerHTML=h.map(ev=>{
+    const d=new Date(ev.date);
+    const fecha=isNaN(d)?ev.date:d.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
+    return `<div class="hist-item">📅 ${ev.title} · ${fecha}</div>`;
+  }).join('');
+}
+
+function toggleHistorial(){
+  document.getElementById('hist-list').classList.toggle('show');
+}
+
+// ── OAUTH CALLBACK ──
+(function(){
+  const hash=window.location.hash.slice(1);
+  if(!hash)return;
+  const p=new URLSearchParams(hash);
+  if(p.get('access_token')){
+    setAccessToken(p.get('access_token'),parseInt(p.get('expires_in')||'3600'));
     setRefreshToken(p.get('refresh_token'));
-    history.replaceState(null, '', '/');
-    updateBadge('badge-gcal', true);
+    history.replaceState(null,'','/');
+    updateBadge('badge-gcal',true);
   }
-  const err = new URLSearchParams(window.location.search).get('auth_error');
-  if(err) { document.getElementById('s-err').textContent = 'Error Google: '+err; showSetup(); }
+  const err=new URLSearchParams(window.location.search).get('auth_error');
+  if(err){document.getElementById('s-err').textContent='Error Google: '+err;showSetup();}
 })();
 
-async function ensureToken() {
-  let token = getAccessToken();
-  if(token) return token;
-  const rt = getRefreshToken();
-  if(!rt) throw new Error('NO_REFRESH');
-  const res = await fetch('/api/refresh?token='+encodeURIComponent(rt));
-  const data = await res.json();
-  if(data.error) throw new Error(data.error);
-  setAccessToken(data.access_token, data.expires_in || 3600);
+async function ensureToken(){
+  let token=getAccessToken();
+  if(token)return token;
+  const rt=getRefreshToken();
+  if(!rt)throw new Error('NO_REFRESH');
+  const res=await fetch('/api/refresh?token='+encodeURIComponent(rt));
+  const data=await res.json();
+  if(data.error)throw new Error(data.error);
+  setAccessToken(data.access_token,data.expires_in||3600);
   return data.access_token;
 }
 
 // ── SETUP ──
-function showSetup() {
+function showSetup(){
   document.getElementById('setup').classList.add('show');
-  const k = getKey();
-  if(k) { document.getElementById('key-input').value=k; updateBadge('badge-aak',true); }
-  if(getRefreshToken()||getAccessToken()) {
+  const k=getKey();
+  if(k){document.getElementById('key-input').value=k;updateBadge('badge-aak',true);}
+  if(getRefreshToken()||getAccessToken()){
     updateBadge('badge-gcal',true);
     document.getElementById('google-connect').classList.add('connected');
     document.getElementById('google-connect').innerHTML='<span>✓ Google Calendar conectado</span>';
   }
   checkSaveBtn();
 }
-
-function updateBadge(id, ok) {
-  const b = document.getElementById(id);
-  b.textContent = ok ? 'Configurado ✓' : (id==='badge-aak'?'No configurada':'No conectado');
-  b.className = 's-badge '+(ok?'badge-ok':'badge-no');
-}
-
-function onKI() {
-  updateBadge('badge-aak', document.getElementById('key-input').value.trim().startsWith('sk-ant-'));
-  checkSaveBtn();
-}
-
-function checkSaveBtn() {
-  const hasKey  = document.getElementById('key-input').value.trim().startsWith('sk-ant-');
-  const hasGcal = !!(getRefreshToken() || getAccessToken());
-  document.getElementById('save-btn').disabled = !(hasKey && hasGcal);
-}
-
-function connectGoogle() {
-  const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
-    client_id:     CLIENT_ID,
-    redirect_uri:  REDIRECT,
-    response_type: 'code',
-    scope:         SCOPE,
-    access_type:   'offline',
-    prompt:        'consent'
-  });
-  window.location.href = url;
-}
-
-function saveSetup() {
-  const v = document.getElementById('key-input').value.trim();
-  if(!v.startsWith('sk-ant-')) { document.getElementById('s-err').textContent='API key inválida.'; return; }
-  localStorage.setItem('aak', v);
+function updateBadge(id,ok){const b=document.getElementById(id);b.textContent=ok?'Configurado ✓':(id==='badge-aak'?'No configurada':'No conectado');b.className='s-badge '+(ok?'badge-ok':'badge-no');}
+function onKI(){updateBadge('badge-aak',document.getElementById('key-input').value.trim().startsWith('sk-ant-'));checkSaveBtn();}
+function checkSaveBtn(){document.getElementById('save-btn').disabled=!(document.getElementById('key-input').value.trim().startsWith('sk-ant-')&&(getRefreshToken()||getAccessToken()));}
+function connectGoogle(){window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+new URLSearchParams({client_id:CLIENT_ID,redirect_uri:REDIRECT,response_type:'code',scope:SCOPE,access_type:'offline',prompt:'consent'});}
+function saveSetup(){
+  const v=document.getElementById('key-input').value.trim();
+  if(!v.startsWith('sk-ant-')){document.getElementById('s-err').textContent='API key inválida.';return;}
+  localStorage.setItem('aak',v);
   document.getElementById('setup').classList.remove('show');
-  if(!document.getElementById('msgs').children.length)
-    addMsg('a','Hola! Agendame lo que necesites. Podés escribir, tocar un chip o usar el micrófono.');
+  if(!document.getElementById('msgs').children.length)addMsg('a','Hola! Agendame lo que necesites. Podés escribir, tocar un chip o usar el micrófono.');
 }
+if(!getKey()||(!getAccessToken()&&!getRefreshToken()))showSetup();
 
-if(!getKey() || (!getAccessToken() && !getRefreshToken())) showSetup();
-
-// ── APP ──
-const today = new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-const msgsEl=document.getElementById('msgs'), txtEl=document.getElementById('txt');
-const sndBtn=document.getElementById('snd'), micBtn=document.getElementById('mic');
-const micIco=document.getElementById('mic-ico'), recBar=document.getElementById('rec-bar');
+// ── APP HELPERS ──
+const today=new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const msgsEl=document.getElementById('msgs'),txtEl=document.getElementById('txt');
+const sndBtn=document.getElementById('snd'),micBtn=document.getElementById('mic');
+const micIco=document.getElementById('mic-ico'),recBar=document.getElementById('rec-bar');
 const errBar=document.getElementById('err-bar');
-let history=[], busy=false, recognition=null, isRec=false, lastEventId=null;
+let history=[],busy=false,recognition=null,isRec=false;
+let lastEventId=getLastEventId();
 
 function si(v){txtEl.value=v;txtEl.focus();onTI(txtEl);}
 function onTI(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px';sndBtn.disabled=busy||!el.value.trim();}
 function showErr(m){errBar.textContent=m;errBar.classList.add('show');setTimeout(()=>errBar.classList.remove('show'),5000);}
-
 function addMsg(role,text){
   const row=document.createElement('div');row.className='row'+(role==='u'?' u':'');
   if(role!=='u'){const av=document.createElement('div');av.className='av';av.textContent='A';row.appendChild(av);}
@@ -301,23 +318,61 @@ function addMsg(role,text){
 function addTyping(){
   const row=document.createElement('div');row.className='row';row.id='trow';
   const av=document.createElement('div');av.className='av';av.textContent='A';row.appendChild(av);
-  const b=document.createElement('div');b.className='bbl a';
-  b.innerHTML='<span class="dots"><span></span><span></span><span></span></span>';
+  const b=document.createElement('div');b.className='bbl a';b.innerHTML='<span class="dots"><span></span><span></span><span></span></span>';
   row.appendChild(b);msgsEl.appendChild(row);msgsEl.scrollTop=msgsEl.scrollHeight;
 }
 function rmTyping(){const e=document.getElementById('trow');if(e)e.remove();}
 
+// ── PICKER MODAL ──
+let pickerCallback=null;
+function showPicker(title,sub,items,cb){
+  pickerCallback=cb;
+  document.getElementById('picker-title').textContent=title;
+  document.getElementById('picker-sub').textContent=sub;
+  const container=document.getElementById('picker-items');
+  container.innerHTML='';
+  items.forEach(item=>{
+    const div=document.createElement('div');div.className='picker-item';
+    div.innerHTML=`<span class="picker-item-title">${item.summary||item.title}</span><span class="picker-item-date">${item.dateLabel||''}</span>`;
+    div.onclick=()=>{closePicker();cb(item);};
+    container.appendChild(div);
+  });
+  document.getElementById('picker').classList.add('show');
+}
+function closePicker(){document.getElementById('picker').classList.remove('show');pickerCallback=null;}
+
+// ── GOOGLE CALENDAR API ──
+async function searchEvents(q){
+  const token=await ensureToken();
+  const params=new URLSearchParams({q,maxResults:'5',orderBy:'startTime',singleEvents:'true',
+    timeMin:new Date(Date.now()-30*24*60*60*1000).toISOString(),
+    timeMax:new Date(Date.now()+180*24*60*60*1000).toISOString()});
+  const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?'+params,
+    {headers:{'Authorization':'Bearer '+token}});
+  const data=await res.json();
+  return (data.items||[]).map(ev=>({
+    ...ev,
+    dateLabel: ev.start?.dateTime
+      ? new Date(ev.start.dateTime).toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+      : ev.start?.date || ''
+  }));
+}
+
 async function createGCalEvent(ev){
   const token=await ensureToken();
-  const body={summary:ev.title,
-    start:{dateTime:ev.start+'-03:00',timeZone:'America/Argentina/Buenos_Aires'},
-    end:{dateTime:ev.end+'-03:00',timeZone:'America/Argentina/Buenos_Aires'}};
+  let body;
+  if(ev.allDay){
+    body={summary:ev.title,start:{date:ev.start},end:{date:ev.end||ev.start}};
+  } else {
+    body={summary:ev.title,
+      start:{dateTime:ev.start+'-03:00',timeZone:'America/Argentina/Buenos_Aires'},
+      end:{dateTime:ev.end+'-03:00',timeZone:'America/Argentina/Buenos_Aires'}};
+  }
   if(ev.location)  body.location  =ev.location;
   if(ev.colorId)   body.colorId   =ev.colorId;
   if(ev.reminders) body.reminders ={useDefault:false,overrides:ev.reminders};
-  const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',{
-    method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-    body:JSON.stringify(body)});
+  const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events',
+    {method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
   return res.json();
 }
 
@@ -330,55 +385,43 @@ async function updateGCalEvent(id,ch){
   if(ch.location) body.location =ch.location;
   if(ch.colorId)  body.colorId  =ch.colorId;
   if(ch.reminders)body.reminders={useDefault:false,overrides:ch.reminders};
-  const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'+id,{
-    method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-    body:JSON.stringify(body)});
+  const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'+id,
+    {method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
   return res.json();
-}
-
-async function searchAndDeleteEvent(searchText){
-  const token=await ensureToken();
-  // Buscar el evento por texto
-  const params=new URLSearchParams({q:searchText,maxResults:'5',orderBy:'startTime',singleEvents:'true',
-    timeMin:new Date(Date.now()-30*24*60*60*1000).toISOString()});
-  const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?'+params,{
-    headers:{'Authorization':'Bearer '+token}});
-  const data=await res.json();
-  if(!data.items||data.items.length===0) return {found:false};
-  // Tomar el más reciente
-  const ev=data.items[0];
-  const delRes=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'+ev.id,{
-    method:'DELETE',headers:{'Authorization':'Bearer '+token}});
-  return {found:true,deleted:delRes.status===204,title:ev.summary};
 }
 
 async function deleteGCalEvent(id){
   const token=await ensureToken();
-  const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'+id,{
-    method:'DELETE',headers:{'Authorization':'Bearer '+token}});
+  const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'+id,
+    {method:'DELETE',headers:{'Authorization':'Bearer '+token}});
   return res.status;
 }
 
 function formatConfirm(ev,isUpdate=false){
-  const d=new Date(ev.start||ev.changes?.start);
-  const fecha=d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
-  const hora=d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-  const titulo=ev.title||ev.changes?.title||'';
-  let txt=(isUpdate?'Evento actualizado!':'Listo! Evento guardado.')+'\n\n📅 '+titulo+'\n🗓 '+fecha+' a las '+hora;
-  const loc=ev.location||ev.changes?.location;
-  if(loc) txt+='\n📍 '+loc;
+  let fecha='',hora='';
+  if(ev.allDay){
+    fecha=new Date(ev.start+'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+    hora='todo el día';
+  } else {
+    const d=new Date(ev.start);
+    fecha=d.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+    hora=d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})+'hs';
+  }
+  let txt=(isUpdate?'Evento actualizado!':'Listo! Evento guardado.')+'\n\n📅 '+ev.title+'\n🗓 '+fecha+', '+hora;
+  if(ev.location) txt+='\n📍 '+ev.location;
   return txt;
 }
 
+// ── SYSTEM PROMPT ──
 const SYSTEM=`Sos un asistente de agenda. El usuario está en Buenos Aires, Argentina (UTC-3). Hoy es ${today}.
 
 Interpretá lo que el usuario quiere hacer y devolvé ÚNICAMENTE un JSON válido. Sin texto extra, sin markdown. Solo JSON puro.
 
-TITULOS (prefijo MAYUSCULAS sin tildes - espacio - guion - espacio - Nombre con primera letra mayuscula):
+TITULOS (prefijo MAYUSCULAS sin tildes - espacio - guion - espacio - Nombre con primera letra en mayúscula):
 Reuniones→"REUNION - [Nombre]" | Turnos→"TURNO - [Nombre]" | Obras→"OBRAS - [Nombre]"
 Pagos→"PAGO - [Nombre]" | Llamadas→"LLAMADA - [Nombre]" | Banco→"BANCO - [Nombre]"
 Calls→"CALL - [Nombre]" | Cenas→"CENA - [Nombre]" | Retiros→"RETIRO - [Nombre]"
-Jornadas→"JORNADA - [Nombre]" | Otros→solo el nombre con primera letra mayuscula sin prefijo
+Jornadas→"JORNADA - [Nombre]" | Otros→nombre con primera letra mayúscula, sin prefijo
 
 COLORES (colorId):
 - SIEMPRE laboral colorId "3" violeta: REUNION, OBRAS, CALL, JORNADA
@@ -389,20 +432,26 @@ COLORES (colorId):
 
 RECORDATORIOS: array de {method:"popup",minutes:N} solo si el usuario los pide.
 
-CORRECCIONES: Si el usuario pide modificar o corregir el último evento devolvé:
-{"action":"update","changes":{solo los campos que cambian}}
+CORRECCIONES: Si el usuario pide modificar o corregir un evento devolvé:
+{"action":"update","search":"título del evento a buscar","changes":{solo los campos que cambian}}
 
 BORRAR: Si el usuario pide borrar o eliminar un evento devolvé:
-{"action":"delete","search":"el título EXACTO del evento tal como quedó guardado, con el prefijo en mayúsculas. Ejemplo: REUNION - Diego"}
+{"action":"delete","search":"título del evento a buscar"}
 
-Para eventos nuevos sin hora: {"need_more":"pregunta breve en español rioplatense"}
-Para eventos nuevos completos: {"action":"create","title":"TITULO","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","location":"opcional","colorId":"opcional","reminders":[]}
+HORA FALTANTE: Si el usuario no menciona hora, preguntá si es a una hora específica o todo el día:
+{"need_more":"pregunta en español rioplatense: A qué hora es, o es todo el día?"}
 
-Sin duración → asumir 1 hora. Nunca uses tildes en prefijos. Nunca uses ¿ ni ¡.`;
+EVENTO DE DIA COMPLETO: Si el usuario dice que es todo el día o no tiene hora, devolvé:
+{"action":"create","title":"TITULO","start":"YYYY-MM-DD","end":"YYYY-MM-DD","allDay":true,"colorId":"opcional"}
 
+EVENTO CON HORA: {"action":"create","title":"TITULO","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","location":"opcional","colorId":"opcional","reminders":[]}
+
+Sin duración → asumir 1 hora. Los nombres propios van con primera letra mayúscula. Nunca uses ¿ ni ¡.`;
+
+// ── SEND ──
 async function send(){
   const text=txtEl.value.trim();
-  if(!text||busy) return;
+  if(!text||busy)return;
   const key=getKey();if(!key){showSetup();return;}
   busy=true;sndBtn.disabled=true;
   history.push({role:'user',content:text});
@@ -424,46 +473,68 @@ async function send(){
       history.push({role:'assistant',content:raw});
       try{
         const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+
         if(parsed.need_more){
           addMsg('a',parsed.need_more);
+
         } else if(parsed.action==='delete'){
           addMsg('a','Buscando evento...');
           try{
-            const searchTerm=parsed.search||'';
-            let result;
-            if(lastEventId&&!searchTerm){
-              const status=await deleteGCalEvent(lastEventId);
-              result={found:true,deleted:status===204,title:'el evento'};
-              if(status===204)lastEventId=null;
+            const items=await searchEvents(parsed.search||'');
+            if(!items.length){
+              msgsEl.lastChild.querySelector('.bbl').textContent='No encontré ningún evento con ese nombre.';
+            } else if(items.length===1){
+              const status=await deleteGCalEvent(items[0].id);
+              if(status===204){if(lastEventId===items[0].id){lastEventId=null;setLastEventId(null);}msgsEl.lastChild.querySelector('.bbl').textContent='Listo! "'+items[0].summary+'" eliminado del calendario.';}
+              else msgsEl.lastChild.querySelector('.bbl').textContent='Error al eliminar.';
             } else {
-              result=await searchAndDeleteEvent(searchTerm);
+              msgsEl.lastChild.querySelector('.bbl').textContent='Encontré varios eventos. Elegí cuál borrar:';
+              showPicker('Borrar evento','Tocá el que querés eliminar',items,async ev=>{
+                const status=await deleteGCalEvent(ev.id);
+                addMsg('a',status===204?'Listo! "'+ev.summary+'" eliminado.':'Error al eliminar.');
+              });
             }
-            if(!result.found)msgsEl.lastChild.querySelector('.bbl').textContent='No encontré el evento. Intentá ser más específico.';
-            else if(result.deleted)msgsEl.lastChild.querySelector('.bbl').textContent='Listo! "'+result.title+'" eliminado del calendario.';
-            else msgsEl.lastChild.querySelector('.bbl').textContent='Error al eliminar el evento.';
           }catch(e){msgsEl.lastChild.querySelector('.bbl').textContent='Error al conectar con Google Calendar.';}
+
         } else if(parsed.action==='update'){
-          if(!lastEventId){addMsg('a','No encontré el evento anterior para modificar.');}
-          else{
-            addMsg('a','Actualizando evento...');
+          const searchTerm=parsed.search||'';
+          const doUpdate=async(id,title)=>{
+            addMsg('a','Actualizando...');
             try{
-              const updated=await updateGCalEvent(lastEventId,parsed.changes);
-              msgsEl.lastChild.querySelector('.bbl').textContent=updated.id?formatConfirm(parsed,true):'Error: '+(updated.error?.message||'desconocido');
-            }catch(e){msgsEl.lastChild.querySelector('.bbl').textContent='Error al conectar con Google Calendar.';}
+              const updated=await updateGCalEvent(id,parsed.changes);
+              if(updated.id){
+                lastEventId=updated.id;setLastEventId(updated.id);
+                const confirmEv={...parsed.changes,title:parsed.changes.title||title,start:parsed.changes.start||updated.start?.dateTime?.slice(0,19)||''};
+                msgsEl.lastChild.querySelector('.bbl').textContent=formatConfirm(confirmEv,true);
+              } else msgsEl.lastChild.querySelector('.bbl').textContent='Error: '+(updated.error?.message||'desconocido');
+            }catch(e){msgsEl.lastChild.querySelector('.bbl').textContent='Error al actualizar.';}
+          };
+          if(searchTerm){
+            addMsg('a','Buscando evento...');
+            try{
+              const items=await searchEvents(searchTerm);
+              if(!items.length){msgsEl.lastChild.querySelector('.bbl').textContent='No encontré el evento.';}
+              else if(items.length===1){msgsEl.lastChild.querySelector('.bbl').textContent='';await doUpdate(items[0].id,items[0].summary);}
+              else{msgsEl.lastChild.querySelector('.bbl').textContent='Encontré varios. Elegí cuál modificar:';showPicker('Modificar evento','Tocá el que querés cambiar',items,ev=>doUpdate(ev.id,ev.summary));}
+            }catch(e){msgsEl.lastChild.querySelector('.bbl').textContent='Error al buscar.';}
+          } else if(lastEventId){
+            await doUpdate(lastEventId,'el evento');
+          } else {
+            addMsg('a','No sé qué evento modificar. Decime el nombre del evento.');
           }
+
         } else if(parsed.action==='create'){
           addMsg('a','Guardando en tu calendario...');
           try{
             const created=await createGCalEvent(parsed);
-            if(created.id){lastEventId=created.id;msgsEl.lastChild.querySelector('.bbl').textContent=formatConfirm(parsed);}
-            else msgsEl.lastChild.querySelector('.bbl').textContent='Error: '+(created.error?.message||'desconocido');
+            if(created.id){
+              lastEventId=created.id;setLastEventId(created.id);
+              addToHistorial({id:created.id,title:parsed.title,start:parsed.start});
+              msgsEl.lastChild.querySelector('.bbl').textContent=formatConfirm(parsed);
+            } else msgsEl.lastChild.querySelector('.bbl').textContent='Error: '+(created.error?.message||'desconocido');
           }catch(e){
-            if(e.message==='NO_REFRESH'){
-              msgsEl.lastChild.querySelector('.bbl').textContent='Sesión expirada. Tocá ⚙️ para reconectar Google.';
-              showSetup();
-            } else {
-              msgsEl.lastChild.querySelector('.bbl').textContent='Error al guardar. Verificá tu conexión.';
-            }
+            if(e.message==='NO_REFRESH'){msgsEl.lastChild.querySelector('.bbl').textContent='Sesión expirada. Tocá ⚙️ para reconectar Google.';showSetup();}
+            else msgsEl.lastChild.querySelector('.bbl').textContent='Error al guardar.';
           }
         } else {addMsg('a',raw);}
       }catch(e){addMsg('a',raw);}
@@ -474,23 +545,18 @@ async function send(){
 
 txtEl.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
 
-function toggleMic(){isRec?stopRec():startRec();}
+// ── MIC — regrabar si hay texto ──
+function toggleMic(){
+  if(!isRec&&txtEl.value.trim()){txtEl.value='';txtEl.style.height='auto';sndBtn.disabled=true;}
+  isRec?stopRec():startRec();
+}
 function startRec(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){showErr('Tu navegador no soporta voz. Usá Chrome.');return;}
   recognition=new SR();recognition.lang='es-AR';recognition.continuous=false;recognition.interimResults=true;
   recognition.onstart=()=>{isRec=true;micBtn.classList.add('on');recBar.classList.add('show');micIco.innerHTML='<rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor"/>';};
-  recognition.onresult=e=>{
-    let t='';
-    for(let i=0;i<e.results.length;i++) t+=e.results[i][0].transcript;
-    txtEl.value=t;onTI(txtEl);
-  };
-  recognition.onerror=e=>{
-    stopRec();
-    if(e.error==='not-allowed')showErr('Permiso denegado. Ajustes → Chrome → Permisos → Micrófono.');
-    else if(e.error==='no-speech')showErr('No se detectó voz. Intentá de nuevo.');
-    else if(e.error!=='aborted')showErr('Error al grabar.');
-  };
+  recognition.onresult=e=>{let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;txtEl.value=t;onTI(txtEl);};
+  recognition.onerror=e=>{stopRec();if(e.error==='not-allowed')showErr('Permiso denegado. Ajustes → Chrome → Permisos → Micrófono.');else if(e.error==='no-speech')showErr('No se detectó voz.');else if(e.error!=='aborted')showErr('Error al grabar.');};
   recognition.onend=()=>{if(isRec)stopRec();};
   recognition.start();
 }
@@ -500,6 +566,8 @@ function stopRec(){
   micIco.innerHTML='<rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/>';
 }
 
+// Init
+renderHistorial();
 if(getKey()&&(getAccessToken()||getRefreshToken()))
   addMsg('a','Hola! Agendame lo que necesites. Podés escribir, tocar un chip o usar el micrófono.');
 </script>
