@@ -182,6 +182,7 @@
       <span class="chip" onclick="si('Cena con ')">CENA</span>
       <span class="chip" onclick="si('Retiro: ')">RETIRO</span>
       <span class="chip" onclick="si('Jornada: ')">JORNADA</span>
+      <span class="chip" onclick="si('Tramite: ')">TRAMITE</span>
     </div>
     <div id="rec-bar"><div id="rec-dot"></div><span id="rec-txt">Escuchando... hablá ahora</span><button id="stop-btn" onclick="stopRec()">Detener</button></div>
     <div id="err-bar"></div>
@@ -385,7 +386,7 @@ async function updateGCalEvent(id,ch){
   if(ch.end)      body.end      ={dateTime:ch.end+'-03:00',timeZone:'America/Argentina/Buenos_Aires'};
   if(ch.location) body.location =ch.location;
   if(ch.colorId)  body.colorId  =ch.colorId;
-  if(ch.reminders)body.reminders={useDefault:false,overrides:ch.reminders};
+  if(ch.reminders !== undefined)body.reminders={useDefault:false,overrides:ch.reminders};
   const res=await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events/'+id,
     {method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
   return res.json();
@@ -418,17 +419,19 @@ const SYSTEM=`Sos un asistente de agenda. El usuario está en Buenos Aires, Arge
 
 Interpretá lo que el usuario quiere hacer y devolvé ÚNICAMENTE un JSON válido. Sin texto extra, sin markdown. Solo JSON puro.
 
-TITULOS (prefijo MAYUSCULAS sin tildes - espacio - guion - espacio - Nombre con primera letra en mayúscula):
+TITULOS (prefijo MAYUSCULAS sin tildes - espacio - guion - espacio - Nombre con cada palabra en mayúscula excepto preposiciones):
 Reuniones→"REUNION - [Nombre]" | Turnos→"TURNO - [Nombre]" | Obras→"OBRAS - [Nombre]"
 Pagos→"PAGO - [Nombre]" | Llamadas→"LLAMADA - [Nombre]" | Banco→"BANCO - [Nombre]"
 Calls→"CALL - [Nombre]" | Cenas→"CENA - [Nombre]" | Retiros→"RETIRO - [Nombre]"
-Jornadas→"JORNADA - [Nombre]" | Otros→nombre con primera letra mayúscula, sin prefijo
+Jornadas→"JORNADA - [Nombre]" | Tramites→"TRAMITE - [Nombre]" | Otros→nombre con cada palabra en mayúscula, sin prefijo
+Preposiciones que van en minúscula: de, del, di, von, van, da, las, los, el, la, y, e
+Ejemplos: "REUNION - Diego de Holder" | "TURNO - Dr. Jorge Pedro" | "TRAMITE - Banco Galicia"
 
 COLORES (colorId):
-- SIEMPRE laboral colorId "3" violeta: REUNION, OBRAS, CALL, JORNADA
+- SIEMPRE laboral colorId "1" amatista: REUNION, OBRAS, CALL, JORNADA
 - SIEMPRE personal colorId "11" rojo: TURNO, CENA
-- PREGUNTAR si es laboral o personal: PAGO, LLAMADA, BANCO, RETIRO
-- Sin etiqueta: laboral→"3", personal→"11", sin especificar→omitir
+- PREGUNTAR si es laboral o personal: PAGO, LLAMADA, BANCO, RETIRO, TRAMITE
+- Sin etiqueta: laboral→"1", personal→"11", sin especificar→omitir
 - Si el usuario ya aclaró laboral o personal en su mensaje, usalo directamente
 
 RECORDATORIOS: array de {method:"popup",minutes:N} solo si el usuario los pide.
@@ -447,7 +450,8 @@ EVENTO DE DIA COMPLETO: Si el usuario dice que es todo el día o no tiene hora, 
 
 EVENTO CON HORA: {"action":"create","title":"TITULO","start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","location":"opcional","colorId":"opcional","reminders":[]}
 
-Sin duración → asumir 1 hora. Los nombres propios van con primera letra mayúscula. Nunca uses ¿ ni ¡.`;
+Sin duración → asumir 1 hora. Los nombres propios van con primera letra mayúscula. Nunca uses ¿ ni ¡.
+Doctor/Doctora → siempre abreviado: Dr. / Dra.`;
 
 // ── SEND ──
 async function send(){
